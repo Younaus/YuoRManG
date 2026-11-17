@@ -1,0 +1,12 @@
+node_modules/
+lib/
+*.log
+.firebase/
+*-debug.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
