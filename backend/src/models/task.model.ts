@@ -17,6 +17,11 @@ export interface TaskDoc extends BaseDoc {
   dueDate: Timestamp | null;
   /** status 'done' olduğunda set edilir, geri alınınca null'lanır */
   completedAt: Timestamp | null;
+  /**
+   * Başlık araması için kelime önekleri (utils/search.ts → buildSearchTokens). API'de dönülmez.
+   * Bu alan eklenmeden önce oluşturulmuş görevler için: npm run migrate:search-tokens
+   */
+  searchTokens: string[];
 }
 
 /** API yanıtında dönen görev. `userId` dönülmez — istek zaten token sahibine aittir. */

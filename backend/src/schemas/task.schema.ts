@@ -68,6 +68,18 @@ export const ListTasksQuerySchema = z
       .enum(['createdAt', 'dueDate'])
       .default('createdAt')
       .openapi({ description: '`createdAt`: yeniden eskiye. `dueDate`: yakından uzağa. dueFrom/dueTo verilirse dueDate kullanılır.' }),
+    q: z
+      .string()
+      .trim()
+      .max(100)
+      .optional()
+      .openapi({
+        description:
+          'Başlıkta kelime öneki araması; büyük/küçük harf ve Türkçe karakter duyarsız. ' +
+          'Örn. "plan" veya "PLANLAMASI" → "Sprint planlaması". Birden çok kelimede hepsi eşleşmelidir. ' +
+          'Arama sırasında bir sayfa `limit`ten az görev içerebilir; devamı için `nextCursor` kullanılır.',
+        example: 'plan',
+      }),
     limit: z.coerce.number().int().min(1).max(100).default(50),
     cursor: docId().optional().openapi({ description: 'Önceki yanıttaki `nextCursor`' }),
   })
