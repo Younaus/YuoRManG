@@ -9,9 +9,16 @@ import '../../../categories/presentation/providers/category_providers.dart';
 import '../../../categories/presentation/widgets/category_colors.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_draft.dart';
+import '../../domain/entities/task_query.dart';
 import '../../domain/entities/task_status.dart';
 import '../providers/task_providers.dart';
 import 'status_style.dart';
+
+/// Seçili kategoriyi varsayılan alarak yeni görev formunu açar (FAB, yan menü, Ctrl+N).
+Future<bool?> showNewTaskForm(BuildContext context, WidgetRef ref) {
+  final scope = ref.read(selectedScopeProvider);
+  return showTaskForm(context, defaultCategoryId: scope is CategoryScope ? scope.categoryId : null);
+}
 
 /// Görev oluşturma/düzenleme: mobilde tam yükseklikte alt sayfa, geniş ekranda diyalog.
 /// Kaydedilirse `true` döner.
@@ -235,11 +242,20 @@ class _TaskFormState extends ConsumerState<TaskForm> {
                   for (final s in TaskStatus.values)
                     ButtonSegment(
                       value: s,
-                      label: Text(s.label, overflow: TextOverflow.ellipsis),
-                      icon: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(color: context.statusColors.of(s).fg, shape: BoxShape.circle),
+                      // Nokta etiketin içinde: dar ekranda "Devam ediyor" sığsın diye ikon boşluğu kullanılmaz.
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(color: context.statusColors.of(s).fg, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(s.label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                          ),
+                        ],
                       ),
                     ),
                 ],

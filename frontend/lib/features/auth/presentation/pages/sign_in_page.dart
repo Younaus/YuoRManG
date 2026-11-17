@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/brand.dart';
 import '../../domain/entities/auth_failure.dart';
 import '../controllers/sign_in_controller.dart';
 
@@ -47,7 +48,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: scheme.surfaceContainerLow,
+      backgroundColor: scheme.surface,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -63,7 +64,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(Icons.task_alt_rounded, size: 40, color: scheme.primary),
+                        const Center(child: AppLogoMark(size: 52)),
                         const SizedBox(height: 16),
                         Text(
                           _isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldiniz',

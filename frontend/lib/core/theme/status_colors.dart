@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Görev durumları için tema uyumlu renkler (yapılacak: gri, devam ediyor: sarı, tamamlandı: yeşil). Kullanım: `Theme.of(context).extension<StatusColors>()!`
+/// Görev durumları için tema uyumlu renkler (yapılacak: gri, devam ediyor: amber, tamamlandı: yeşil).
+/// Kullanım: `Theme.of(context).extension<StatusColors>()!`
 @immutable
 class StatusColors extends ThemeExtension<StatusColors> {
   const StatusColors({
@@ -11,26 +12,29 @@ class StatusColors extends ThemeExtension<StatusColors> {
     required this.done,
     required this.doneContainer,
     required this.overdue,
+    required this.overdueContainer,
   });
 
   static const light = StatusColors(
     todo: Color(0xFF64748B),
     todoContainer: Color(0xFFF1F5F9),
-    inProgress: Color(0xFFA16207),
-    inProgressContainer: Color(0xFFFEF9C3),
-    done: Color(0xFF16A34A),
-    doneContainer: Color(0xFFDCFCE7),
+    inProgress: Color(0xFFD97706),
+    inProgressContainer: Color(0xFFFEF3C7),
+    done: Color(0xFF059669),
+    doneContainer: Color(0xFFD1FAE5),
     overdue: Color(0xFFDC2626),
+    overdueContainer: Color(0xFFFEE2E2),
   );
 
   static const dark = StatusColors(
     todo: Color(0xFF94A3B8),
     todoContainer: Color(0xFF1E293B),
-    inProgress: Color(0xFFFACC15),
-    inProgressContainer: Color(0xFF3A3104),
-    done: Color(0xFF4ADE80),
-    doneContainer: Color(0xFF052E16),
+    inProgress: Color(0xFFFBBF24),
+    inProgressContainer: Color(0xFF3A2A06),
+    done: Color(0xFF34D399),
+    doneContainer: Color(0xFF07322A),
     overdue: Color(0xFFF87171),
+    overdueContainer: Color(0xFF3B1218),
   );
 
   final Color todo;
@@ -40,6 +44,7 @@ class StatusColors extends ThemeExtension<StatusColors> {
   final Color done;
   final Color doneContainer;
   final Color overdue;
+  final Color overdueContainer;
 
   @override
   StatusColors copyWith({
@@ -50,6 +55,7 @@ class StatusColors extends ThemeExtension<StatusColors> {
     Color? done,
     Color? doneContainer,
     Color? overdue,
+    Color? overdueContainer,
   }) {
     return StatusColors(
       todo: todo ?? this.todo,
@@ -59,6 +65,7 @@ class StatusColors extends ThemeExtension<StatusColors> {
       done: done ?? this.done,
       doneContainer: doneContainer ?? this.doneContainer,
       overdue: overdue ?? this.overdue,
+      overdueContainer: overdueContainer ?? this.overdueContainer,
     );
   }
 
@@ -73,6 +80,7 @@ class StatusColors extends ThemeExtension<StatusColors> {
       done: Color.lerp(done, other.done, t)!,
       doneContainer: Color.lerp(doneContainer, other.doneContainer, t)!,
       overdue: Color.lerp(overdue, other.overdue, t)!,
+      overdueContainer: Color.lerp(overdueContainer, other.overdueContainer, t)!,
     );
   }
 }

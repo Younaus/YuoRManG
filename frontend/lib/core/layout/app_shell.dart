@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../router/app_destinations.dart';
+import '../theme/app_surfaces.dart';
+import '../widgets/brand.dart';
 import 'app_sidebar.dart';
 import 'breakpoints.dart';
 
 /// Ekran genişliğine göre şekil değiştiren ana iskelet:
-///  - compact:  alt NavigationBar
-///  - medium:   NavigationRail
+///  - compact:  alt NavigationBar (ince üst kenarlık + yumuşak gölge)
+///  - medium:   logolu NavigationRail
 ///  - expanded: sabit yan menü (kategori ağacıyla)
 class AppShell extends StatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -37,7 +39,6 @@ class _AppShellState extends State<AppShell> {
           body: Row(
             children: [
               AppSidebar(navigationShell: shell),
-              const VerticalDivider(width: 1),
               Expanded(child: content),
             ],
           ),
@@ -50,9 +51,9 @@ class _AppShellState extends State<AppShell> {
                 onDestinationSelected: _goBranch,
                 labelType: NavigationRailLabelType.all,
                 groupAlignment: -0.9,
-                leading: Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 16),
-                  child: Icon(Icons.task_alt_rounded, color: Theme.of(context).colorScheme.primary, size: 28),
+                leading: const Padding(
+                  padding: EdgeInsets.only(top: 12, bottom: 20),
+                  child: AppLogoMark(size: 40),
                 ),
                 destinations: [
                   for (final d in appDestinations)
@@ -63,20 +64,26 @@ class _AppShellState extends State<AppShell> {
                     ),
                 ],
               ),
-              const VerticalDivider(width: 1),
+              VerticalDivider(width: 1, color: context.surfaces.border),
               Expanded(child: content),
             ],
           ),
         ),
       WindowSize.compact => Scaffold(
           body: content,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: shell.currentIndex,
-            onDestinationSelected: _goBranch,
-            destinations: [
-              for (final d in appDestinations)
-                NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label),
-            ],
+          bottomNavigationBar: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.surfaces.border)),
+              boxShadow: [BoxShadow(color: context.surfaces.shadow, blurRadius: 16, offset: const Offset(0, -4))],
+            ),
+            child: NavigationBar(
+              selectedIndex: shell.currentIndex,
+              onDestinationSelected: _goBranch,
+              destinations: [
+                for (final d in appDestinations)
+                  NavigationDestination(icon: Icon(d.icon), selectedIcon: Icon(d.selectedIcon), label: d.label),
+              ],
+            ),
           ),
         ),
     };

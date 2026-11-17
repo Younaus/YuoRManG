@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/brand.dart';
+
 import '../../../tasks/domain/entities/task_query.dart';
 import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../domain/entities/category.dart';
@@ -16,8 +19,12 @@ class CategoryTreePanel extends ConsumerStatefulWidget {
     this.onScopeSelected,
     this.highlightSelection = true,
     this.enableDragAndDrop = false,
+    this.header,
     super.key,
   });
+
+  /// Listenin en üstünde, panelle birlikte kayan içerik (ör. özet kartı).
+  final Widget? header;
 
   /// Seçimden sonra (ör. çekmeceyi kapatmak / görevler sekmesine geçmek için).
   final ValueChanged<TaskScope>? onScopeSelected;
@@ -74,8 +81,10 @@ class _CategoryTreePanelState extends ConsumerState<CategoryTreePanel> {
     final showRootDrop = widget.enableDragAndDrop && _dragging?.parentId != null && tree != null;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
       children: [
+        if (widget.header != null) ...[widget.header!, const SizedBox(height: 16)],
+        const SectionLabel(text: 'Görünümler', padding: EdgeInsets.fromLTRB(12, 8, 12, 6)),
         _ScopeTile(
           icon: Icons.inbox_outlined,
           selectedIcon: Icons.inbox,
@@ -90,15 +99,16 @@ class _CategoryTreePanelState extends ConsumerState<CategoryTreePanel> {
           selected: isSelected(const TaskScope.uncategorized()),
           onTap: () => select(const TaskScope.uncategorized()),
         ),
-        const SizedBox(height: 16),
-        _SectionHeader(
-          title: 'Kategoriler',
-          action: IconButton(
+        const SizedBox(height: 18),
+        SectionLabel(
+          text: 'Kategoriler',
+          padding: const EdgeInsets.only(left: 12),
+          trailing: IconButton(
             key: const Key('categories.add'),
             tooltip: 'Yeni kategori',
             visualDensity: VisualDensity.compact,
             iconSize: 20,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: () => showCategoryFormDialog(context),
           ),
         ),
@@ -227,36 +237,6 @@ class _DragFeedback extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.action});
-
-  final String title;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 12, bottom: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 0.8,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ?action,
-        ],
-      ),
-    );
-  }
-}
-
 class _Hint extends StatelessWidget {
   const _Hint(this.text);
 
@@ -272,7 +252,7 @@ class _Hint extends StatelessWidget {
   }
 }
 
-/// Seçilebilir satırların ortak görünümü.
+/// Seçilebilir satırların ortak görünümü: seçiliyken dolu indigo zemin.
 class _SelectableRow extends StatelessWidget {
   const _SelectableRow({required this.selected, required this.onTap, required this.child, this.onLongPress});
 
@@ -284,16 +264,26 @@ class _SelectableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const radius = BorderRadius.all(Radius.circular(AppTheme.radiusSm));
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Material(
-        color: selected ? scheme.secondaryContainer : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: SizedBox(height: 40, child: child),
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: selected
+              ? [BoxShadow(color: scheme.primary.withValues(alpha: 0.28), blurRadius: 10, offset: const Offset(0, 3))]
+              : null,
+        ),
+        child: Material(
+          color: selected ? scheme.primary : Colors.transparent,
+          borderRadius: radius,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: SizedBox(height: 42, child: child),
+          ),
         ),
       ),
     );
@@ -318,7 +308,7 @@ class _ScopeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fg = selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurfaceVariant;
+    final fg = selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant;
     return _SelectableRow(
       selected: selected,
       onTap: onTap,
@@ -385,7 +375,9 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
     final theme = Theme.of(context);
     final c = widget.category;
     final hasChildren = c.children.isNotEmpty;
-    final fg = widget.selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface;
+    final scheme = theme.colorScheme;
+    final fg = widget.selected ? scheme.onPrimary : scheme.onSurface;
+    final muted = widget.selected ? scheme.onPrimary.withValues(alpha: 0.8) : scheme.onSurfaceVariant;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -408,15 +400,15 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
                       icon: AnimatedRotation(
                         turns: widget.expanded ? 0.25 : 0,
                         duration: const Duration(milliseconds: 150),
-                        child: Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+                        child: Icon(Icons.chevron_right, color: muted),
                       ),
                       onPressed: widget.onToggleExpanded,
                     )
                   : null,
             ),
-            const SizedBox(width: 4),
-            CategoryDot(hex: c.color),
-            const SizedBox(width: 12),
+            const SizedBox(width: 2),
+            _CategoryIcon(hex: c.color, onPrimary: widget.selected),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 c.name,
@@ -435,7 +427,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
                 tooltip: 'Kategori işlemleri',
                 iconSize: 18,
                 padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_horiz, color: theme.colorScheme.onSurfaceVariant),
+                icon: Icon(Icons.more_horiz, color: muted),
                 onSelected: _onAction,
                 itemBuilder: (_) => const [
                   PopupMenuItem(
@@ -457,6 +449,31 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Kategori rengine boyanmış küçük klasör karosu.
+class _CategoryIcon extends StatelessWidget {
+  const _CategoryIcon({required this.hex, required this.onPrimary});
+
+  final String? hex;
+
+  /// Seçili (indigo zeminli) satırda beyaz tonlarda çizilir.
+  final bool onPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = onPrimary ? scheme.onPrimary : (colorFromHex(hex) ?? scheme.outline);
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: onPrimary ? 0.20 : 0.14),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXs + 1),
+      ),
+      child: Icon(Icons.folder_rounded, size: 15, color: color),
     );
   }
 }

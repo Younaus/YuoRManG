@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/theme/app_surfaces.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/task_status.dart';
 import '../providers/task_providers.dart';
 import 'status_style.dart';
 
-/// Durum filtresi (çipler) + sıralama menüsü.
+/// Durum filtresi (hap çipler) + sıralama menüsü.
 class TaskFilterBar extends ConsumerWidget {
   const TaskFilterBar({this.padding = const EdgeInsets.symmetric(horizontal: 16), super.key});
 
@@ -14,6 +16,7 @@ class TaskFilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final filter = ref.watch(taskFilterProvider);
     final controller = ref.read(taskFilterProvider.notifier);
     final iconOnlySort = context.windowSize == WindowSize.compact;
@@ -43,22 +46,34 @@ class TaskFilterBar extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           PopupMenuButton<TaskSort>(
             tooltip: 'Sırala: ${filter.sort.label}',
             initialValue: filter.sort,
             onSelected: controller.setSort,
+            position: PopupMenuPosition.under,
             itemBuilder: (_) => [
-              for (final s in TaskSort.values) CheckedPopupMenuItem(value: s, checked: s == filter.sort, child: Text(s.label)),
+              for (final s in TaskSort.values)
+                CheckedPopupMenuItem(value: s, checked: s == filter.sort, child: Text(s.label)),
             ],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Container(
+              height: 36,
+              padding: EdgeInsets.symmetric(horizontal: iconOnlySort ? 9 : 12),
+              decoration: BoxDecoration(
+                color: context.surfaces.card,
+                borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                border: Border.all(color: context.surfaces.border),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.sort, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(Icons.swap_vert_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
                   if (!iconOnlySort) ...[
                     const SizedBox(width: 6),
-                    Text(filter.sort.label, style: Theme.of(context).textTheme.labelLarge),
+                    Text(
+                      filter.sort.label,
+                      style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurface),
+                    ),
                   ],
                 ],
               ),
@@ -80,15 +95,24 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: selected,
         showCheckmark: false,
+        labelStyle: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: selected ? scheme.onPrimary : scheme.onSurface),
+        side: BorderSide(color: selected ? scheme.primary : context.surfaces.border),
         avatar: dotColor == null
             ? null
-            : Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+            : Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: selected ? scheme.onPrimary : dotColor, shape: BoxShape.circle),
+              ),
         onSelected: (_) => onSelected(),
       ),
     );

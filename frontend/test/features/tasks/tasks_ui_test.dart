@@ -187,6 +187,41 @@ void main() {
     });
   });
 
+  group('Clarity Workspace', () {
+    testWidgets('genel bakış kartı tamamlanma oranını gösterir; filtre/aramada gizlenir', (tester) async {
+      await pump(tester, desktop);
+      final overview = find.byKey(const Key('tasks.overview'));
+      expect(overview, findsOneWidget);
+      expect(find.descendant(of: overview, matching: find.textContaining('1/4 görev tamamlandı')), findsOneWidget);
+      expect(find.descendant(of: overview, matching: find.text('%25')), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Tamamlandı'));
+      await tester.pumpAndSettle();
+      expect(overview, findsNothing, reason: 'durum filtresinde oran anlamsız');
+    });
+
+    testWidgets('masaüstü yan menüsündeki "Yeni görev" ayarlardayken de görevler sekmesine döner', (tester) async {
+      await pump(tester, desktop);
+      await tester.tap(find.byKey(const Key('sidebar.settings')));
+      await tester.pumpAndSettle();
+      expect(find.byType(TaskCard), findsNothing);
+
+      await tester.tap(find.byKey(const Key('tasks.newTask')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.byKey(const Key('taskForm.title')), findsOneWidget);
+    });
+
+    testWidgets('masaüstü başlığındaki tema düğmesi açık/koyu arasında geçiş yapar', (tester) async {
+      await pump(tester, desktop);
+      final context = tester.element(find.byType(TaskCard).first);
+      expect(Theme.of(context).brightness, Brightness.light);
+      await tester.tap(find.byKey(const Key('tasks.themeToggle')));
+      await tester.pumpAndSettle();
+      expect(Theme.of(tester.element(find.byType(TaskCard).first)).brightness, Brightness.dark);
+    });
+  });
+
   group('görev oluşturma', () {
     testWidgets('masaüstü: diyalog, doğrulama ve seçili kategoriyle oluşturma', (tester) async {
       await pump(tester, desktop);

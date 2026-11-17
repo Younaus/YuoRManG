@@ -12,10 +12,13 @@ import 'task_form.dart';
 
 /// Görev listesi: yükleniyor / hata / boş durumları, sonsuz kaydırma, kaydırarak işlemler.
 class TaskListView extends ConsumerStatefulWidget {
-  const TaskListView({required this.onCreateTask, this.padding = EdgeInsets.zero, super.key});
+  const TaskListView({required this.onCreateTask, this.padding = EdgeInsets.zero, this.header, super.key});
 
   final VoidCallback onCreateTask;
   final EdgeInsets padding;
+
+  /// Listeyle birlikte kayan başlık (ör. genel bakış kartı); yalnızca görev varken gösterilir.
+  final Widget? header;
 
   @override
   ConsumerState<TaskListView> createState() => _TaskListViewState();
@@ -115,17 +118,19 @@ class _TaskListViewState extends ConsumerState<TaskListView> {
                 return _EmptyTasks(filter: filter, onCreateTask: widget.onCreateTask);
               }
               final state = listState.value;
+              final offset = widget.header == null ? 0 : 1;
               return RefreshIndicator(
                 onRefresh: _controller.refresh,
                 child: ListView.separated(
                   controller: _scroll,
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: widget.padding.copyWith(top: widget.padding.top + 6, bottom: widget.padding.bottom + 96),
-                  itemCount: items.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  padding: widget.padding.copyWith(top: widget.padding.top + 6, bottom: widget.padding.bottom + 104),
+                  itemCount: offset + items.length + 1,
+                  separatorBuilder: (_, i) => SizedBox(height: i < offset ? 16 : 10),
                   itemBuilder: (context, i) {
-                    if (i == items.length) return _Footer(state: state, onLoadMore: _controller.loadMore);
-                    final task = items[i];
+                    if (i < offset) return widget.header!;
+                    if (i == offset + items.length) return _Footer(state: state, onLoadMore: _controller.loadMore);
+                    final task = items[i - offset];
                     return TaskCard(
                       key: ValueKey(task.id),
                       task: task,
@@ -218,7 +223,7 @@ class _Skeleton extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: padding.copyWith(top: padding.top + 6),
       itemCount: 5,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) => Card(
         child: Padding(
           padding: const EdgeInsets.all(16),

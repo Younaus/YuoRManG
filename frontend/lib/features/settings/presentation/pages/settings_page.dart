@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/theme/theme_mode_controller.dart';
+import '../../../../core/widgets/brand.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -15,7 +17,10 @@ class SettingsPage extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ayarlar')),
+      appBar: AppBar(
+        toolbarHeight: 64,
+        title: AppTitleBlock(title: 'Ayarlar', showLogo: context.windowSize == WindowSize.compact),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -28,7 +33,7 @@ class SettingsPage extends ConsumerWidget {
                   _Section(
                     title: 'Hesap',
                     child: ListTile(
-                      leading: CircleAvatar(child: Text(user?.initials ?? '?')),
+                      leading: UserAvatar(user: user, radius: 20),
                       title: Text(user?.label ?? '-'),
                       subtitle: Text(user?.email ?? ''),
                       trailing: OutlinedButton.icon(
@@ -102,20 +107,10 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ),
+        SectionLabel(text: title, padding: const EdgeInsets.only(left: 4, bottom: 8)),
         Card(child: child),
       ],
     );
