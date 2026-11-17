@@ -101,6 +101,35 @@ void main() {
     expect((await tasks.list(const TaskQuery())).items, isEmpty);
   });
 
+  test('kategori yeniden adlandırma ve taşıma gerçek API ile uyumlu', () async {
+    final a = await categories.create(name: 'Taşı-A', color: '#4F46E5');
+    final b = await categories.create(name: 'Taşı-B', parentId: a.id);
+    final c = await categories.create(name: 'Taşı-C');
+
+    // Yalnızca ad: renk ve konum korunur.
+    final renamed = await categories.update(a.id, name: 'Taşı-A2');
+    expect((renamed.name, renamed.color, renamed.parentId), ('Taşı-A2', '#4F46E5', null));
+
+    // B'yi C'nin altına, sonra köke taşı (parentId: null gönderilir).
+    expect((await categories.update(b.id, parent: ParentChange(c.id))).parentId, c.id);
+    var tree = await categories.getTree();
+    expect(tree.pathTo(b.id).map((x) => x.name), ['Taşı-C', 'Taşı-B']);
+    expect((await categories.update(b.id, parent: const ParentChange(null))).parentId, isNull);
+
+    // Döngü: C'yi kendi alt kategorisinin altına taşımak reddedilir.
+    await categories.update(b.id, parent: ParentChange(c.id));
+    await expectLater(
+      categories.update(c.id, parent: ParentChange(b.id)),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 400)),
+    );
+    tree = await categories.getTree();
+    expect(tree[c.id]!.parentId, isNull, reason: 'reddedilen taşıma hiçbir şeyi değiştirmez');
+
+    for (final id in [a.id, c.id]) {
+      await categories.delete(id);
+    }
+  });
+
   test('backend hataları ApiException olarak eşlenir', () async {
     await expectLater(
       tasks.create(const TaskDraft(title: '   ')),
