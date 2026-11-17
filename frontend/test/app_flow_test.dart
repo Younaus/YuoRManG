@@ -12,7 +12,7 @@ void main() {
   testWidgets('oturum yoksa giriş sayfası açılır', (tester) async {
     await tester.pumpApp(auth: FakeAuthRepository());
     expect(find.byType(SignInPage), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(NavigationRail), findsNothing);
   });
 
   testWidgets('hatalı şifre hata mesajı gösterir, doğru şifre görevlere yönlendirir', (tester) async {
@@ -28,7 +28,8 @@ void main() {
     await tester.tap(find.byKey(const Key('signIn.submit')));
     await tester.pumpAndSettle();
     expect(find.byType(TasksPage), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    // 800x600 test penceresi "medium" düzen: NavigationRail
+    expect(find.byType(NavigationRail), findsOneWidget);
   });
 
   testWidgets('sekmeler arası geçiş, tema değişimi ve çıkış', (tester) async {

@@ -1,0 +1,3 @@
+tags:
+  integration:
+    skip: "Firebase emülatörleri gerekir. Çalıştırmak için: flutter test -t integration --run-skipped"
