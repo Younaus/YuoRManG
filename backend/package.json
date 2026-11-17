@@ -13,7 +13,9 @@
     "serve": "npm run build && firebase emulators:start --only functions,firestore,auth",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test:smoke": "node scripts/smoke-test.mjs"
+    "test:smoke": "node scripts/smoke-test.mjs",
+    "test:unit": "npm run build && node --test \"test/**/*.test.mjs\"",
+    "migrate:search-tokens": "npm run build && node scripts/backfill-search-tokens.mjs"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^9.1.0",
