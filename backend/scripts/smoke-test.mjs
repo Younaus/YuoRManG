@@ -169,6 +169,60 @@ r = await a('POST', '/v1/tasks', undefined, '{"title":');
 // Functions runtime JSON'u Express'ten önce ayrıştırır; bozuk gövdeyi kendisi boş 400 ile reddeder.
 check('malformed JSON → 400', r.status === 400, r.body);
 
+console.log('\n[Search]');
+// Ayrı kullanıcı: önceki adımların görevleri sonuçları etkilemesin.
+const s = client(await signUp(`s${run}@test.dev`));
+const searchCat = (await s('POST', '/v1/categories', { name: 'Arama' })).body;
+const mk = async (title, extra = {}) => (await s('POST', '/v1/tasks', { title, ...extra })).body;
+const st1 = await mk('Sprint planlaması', { categoryId: searchCat.id });
+const st2 = await mk('Müşteri sunumu', { status: 'done' });
+const st3 = await mk('ÇİÇEK SİPARİŞİ');
+await mk('Haftalık plan toplantısı', { status: 'done' });
+const titles = async (qs) => (await s('GET', `/v1/tasks?${qs}`)).body.items?.map((t) => t.title).sort();
+
+check('task responses do not expose searchTokens', !('searchTokens' in st1), st1);
+check('q=plan → word-prefix matches only', JSON.stringify(await titles('q=plan')) === JSON.stringify(['Haftalık plan toplantısı', 'Sprint planlaması']), await titles('q=plan'));
+check('case-insensitive (q=PLANLAMASI)', JSON.stringify(await titles('q=PLANLAMASI')) === JSON.stringify(['Sprint planlaması']));
+check('Turkish chars folded (q=planlamasi, q=cicek)',
+  JSON.stringify(await titles('q=planlamasi')) === JSON.stringify(['Sprint planlaması']) &&
+  JSON.stringify(await titles(`q=${encodeURIComponent('çiçek')}`)) === JSON.stringify(['ÇİÇEK SİPARİŞİ']) &&
+  JSON.stringify(await titles('q=CICEK')) === JSON.stringify(['ÇİÇEK SİPARİŞİ']));
+check('mid-word does not match (q=lamasi)', (await titles('q=lamasi')).length === 0);
+check('multi-word: all words must match', JSON.stringify(await titles(`q=${encodeURIComponent('sprint plan')}`)) === JSON.stringify(['Sprint planlaması']) && (await titles(`q=${encodeURIComponent('sprint xyz')}`)).length === 0);
+check('search + status filter', JSON.stringify(await titles('q=plan&status=done')) === JSON.stringify(['Haftalık plan toplantısı']));
+check('search + category filter', JSON.stringify(await titles(`q=plan&categoryId=${searchCat.id}`)) === JSON.stringify(['Sprint planlaması']));
+// array-contains + `in` (alt kategoriler dahil) birlikte çalışmalı.
+const searchSub = (await s('POST', '/v1/categories', { name: 'Alt', parentId: searchCat.id })).body;
+const stSub = await mk('Plan detayları', { categoryId: searchSub.id });
+r = await s('GET', `/v1/tasks?q=plan&categoryId=${searchCat.id}&includeSubcategories=true`);
+check('search + includeSubcategories (array-contains + in)',
+  r.status === 200 && JSON.stringify(r.body.items.map((t) => t.title).sort()) === JSON.stringify(['Plan detayları', 'Sprint planlaması']), r.body);
+await s('DELETE', `/v1/tasks/${stSub.id}`);
+check('search + dueDate sort', JSON.stringify(await titles('q=plan&sort=dueDate')) === JSON.stringify(['Haftalık plan toplantısı', 'Sprint planlaması']));
+check('punctuation-only q is ignored (all tasks)', (await titles(`q=${encodeURIComponent('...')}`)).length === 4);
+r = await s('GET', `/v1/tasks?q=${'x'.repeat(101)}`);
+check('q longer than 100 → 400', r.status === 400, r.body);
+
+r = await s('PATCH', `/v1/tasks/${st2.id}`, { title: 'Müşteri planı' });
+check('title update refreshes tokens', JSON.stringify(await titles('q=musteri%20plan')) === JSON.stringify(['Müşteri planı']));
+r = await s('PATCH', `/v1/tasks/${st3.id}`, { status: 'in_progress' });
+check('non-title update keeps tokens', JSON.stringify(await titles('q=siparis')) === JSON.stringify(['ÇİÇEK SİPARİŞİ']));
+
+// Sayfalama: 5 eşleşen + 5 eşleşmeyen (ilk kelime aynı) görev, limit=2, çok kelimeli arama (bellekte eleme).
+for (let i = 0; i < 5; i++) await mk(`Rapor haftalık ${i}`);
+for (let i = 0; i < 5; i++) await mk(`Rapor aylık ${i}`);
+const seen = [];
+let cursor = null;
+let pages = 0;
+do {
+  const page = (await s('GET', `/v1/tasks?q=${encodeURIComponent('rapor haftalik')}&limit=2${cursor ? `&cursor=${cursor}` : ''}`)).body;
+  seen.push(...page.items.map((t) => t.title));
+  cursor = page.nextCursor;
+  pages++;
+} while (cursor && pages < 10);
+check('multi-word search paginates without duplicates or misses',
+  seen.length === 5 && new Set(seen).size === 5 && seen.every((t) => t.startsWith('Rapor haftalık')), { seen, pages });
+
 console.log('\n[Docs]');
 r = await anon('GET', '/docs.json');
 const paths = Object.keys(r.body.paths ?? {});
