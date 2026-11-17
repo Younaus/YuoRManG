@@ -159,12 +159,18 @@ void main() {
   });
 
   group('arama ve filtre', () {
-    testWidgets('arama metni listeyi daraltır', (tester) async {
+    testWidgets('arama kutusu debounce sonrası sunucuya q gönderir ve listeyi daraltır', (tester) async {
       await pump(tester, desktop);
-      await tester.enterText(find.byKey(const Key('tasks.search')), 'market');
+      final before = tasks.queries.length;
+      await tester.enterText(find.byKey(const Key('tasks.search')), 'mar');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.enterText(find.byKey(const Key('tasks.search')), 'MARKET');
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
+      expect(tasks.queries.length, before + 1, reason: 'hızlı yazımda tek istek (debounce)');
+      expect(tasks.queries.last.search, 'MARKET');
       expect(find.byType(TaskCard), findsOneWidget);
+      expect(find.text('Market alışverişi'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('tasks.search')), 'zzz');
       await tester.pump(const Duration(milliseconds: 300));

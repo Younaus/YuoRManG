@@ -52,5 +52,10 @@ void main() {
         {'categoryId': 'c1', 'includeSubcategories': 'true', 'sort': 'createdAt', 'limit': 50},
       );
     });
+    test('arama metni kırpılarak q olarak gönderilir; boşsa gönderilmez', () {
+      expect(taskQueryToParams(const TaskQuery(search: '  plan  '))['q'], 'plan');
+      expect(taskQueryToParams(const TaskQuery(search: '   ')).containsKey('q'), isFalse);
+      expect(taskQueryToParams(const TaskQuery()).containsKey('q'), isFalse);
+    });
   });
 }

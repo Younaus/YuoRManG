@@ -130,6 +130,22 @@ void main() {
     }
   });
 
+  test('başlık araması (q) gerçek API ile uyumlu', () async {
+    final a = await tasks.create(const TaskDraft(title: 'Bütçe planlaması', status: TaskStatus.done));
+    final b = await tasks.create(const TaskDraft(title: 'Şirket gezisi'));
+    Future<List<String>> search(String q, {TaskStatus? status}) async =>
+        (await tasks.list(TaskQuery(search: q, status: status))).items.map((t) => t.title).toList();
+
+    expect(await search('plan'), ['Bütçe planlaması']);
+    expect(await search('BUTCE PLAN'), ['Bütçe planlaması'], reason: 'Türkçe karakter + çok kelime');
+    expect(await search('sirket'), ['Şirket gezisi']);
+    expect(await search('lamasi'), isEmpty, reason: 'kelime ortası eşleşmez');
+    expect(await search('plan', status: TaskStatus.todo), isEmpty, reason: 'durum filtresiyle birlikte');
+
+    await tasks.delete(a.id);
+    await tasks.delete(b.id);
+  });
+
   test('backend hataları ApiException olarak eşlenir', () async {
     await expectLater(
       tasks.create(const TaskDraft(title: '   ')),

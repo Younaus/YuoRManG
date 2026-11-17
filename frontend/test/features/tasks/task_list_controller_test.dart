@@ -122,6 +122,34 @@ void main() {
     expect(c.read(taskListProvider).value!.hasMore, isFalse);
   });
 
+  test('arama metni sunucuya q olarak gider ve liste sunucu sonucuyla yenilenir', () async {
+    await c.read(taskListProvider.future);
+
+    c.read(taskFilterProvider.notifier).setSearch('  SPRİNT ');
+    await c.read(taskListProvider.future);
+    expect(repo.queries.last.search, 'SPRİNT', reason: 'kırpılmış metin gönderilir');
+    expect(ids(), ['t1']);
+
+    // Arama yalnızca başlıkta: açıklamadaki "Hedefleri" eşleşmez.
+    c.read(taskFilterProvider.notifier).setSearch('hedef');
+    await c.read(taskListProvider.future);
+    expect(ids(), isEmpty);
+
+    c.read(taskFilterProvider.notifier).setSearch('');
+    await c.read(taskListProvider.future);
+    expect(repo.queries.last.search, isNull, reason: 'boş arama parametre göndermez');
+    expect(ids().length, 4);
+  });
+
+  test('arama diğer filtrelerle birlikte gönderilir', () async {
+    c.read(selectedScopeProvider.notifier).select(const TaskScope.category('work'));
+    c.read(taskFilterProvider.notifier).setSearch('api');
+    await c.read(taskListProvider.future);
+    final q = repo.queries.last;
+    expect((q.search, q.includeSubcategories, q.scope), ('api', true, const TaskScope.category('work')));
+    expect(ids(), ['t2']);
+  });
+
   test('create sonrası liste yenilenir ve yeni görev en üstte', () async {
     await c.read(taskListProvider.future);
     await c.read(taskListProvider.notifier).create(const TaskDraft(title: 'Yeni'));
