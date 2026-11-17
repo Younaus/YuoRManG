@@ -18,7 +18,7 @@ abstract final class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.seed,
       brightness: brightness,
-      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+      dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
     ).copyWith(
       primary: isDark ? const Color(0xFF818CF8) : AppColors.seed,
       onPrimary: isDark ? const Color(0xFF1E1B4B) : Colors.white,
@@ -125,22 +125,22 @@ abstract final class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: scheme.primaryContainer,
+        indicatorColor: scheme.secondaryContainer,
         elevation: 0,
         height: 68,
         labelTextStyle: WidgetStatePropertyAll(text.labelMedium),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: scheme.surfaceContainerLow,
-        indicatorColor: scheme.primaryContainer,
-        selectedIconTheme: IconThemeData(color: scheme.onPrimaryContainer),
+        indicatorColor: scheme.secondaryContainer,
+        selectedIconTheme: IconThemeData(color: scheme.onSecondaryContainer),
         selectedLabelTextStyle: text.labelMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600),
         unselectedLabelTextStyle: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),
       navigationDrawerTheme: NavigationDrawerThemeData(
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: scheme.primaryContainer,
+        indicatorColor: scheme.secondaryContainer,
         indicatorShape: smShape,
         elevation: 0,
       ),
@@ -167,6 +167,8 @@ abstract final class AppTheme {
         textStyle: text.bodySmall?.copyWith(color: scheme.onInverseSurface),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
         elevation: 0,
         focusElevation: 0,
         hoverElevation: 2,

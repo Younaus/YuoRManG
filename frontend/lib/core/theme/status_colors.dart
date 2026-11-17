@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Görev durumları için tema uyumlu renkler. Kullanım: `Theme.of(context).extension<StatusColors>()!`
+/// Görev durumları için tema uyumlu renkler (yapılacak: gri, devam ediyor: sarı, tamamlandı: yeşil). Kullanım: `Theme.of(context).extension<StatusColors>()!`
 @immutable
 class StatusColors extends ThemeExtension<StatusColors> {
   const StatusColors({
@@ -16,8 +16,8 @@ class StatusColors extends ThemeExtension<StatusColors> {
   static const light = StatusColors(
     todo: Color(0xFF64748B),
     todoContainer: Color(0xFFF1F5F9),
-    inProgress: Color(0xFF2563EB),
-    inProgressContainer: Color(0xFFDBEAFE),
+    inProgress: Color(0xFFA16207),
+    inProgressContainer: Color(0xFFFEF9C3),
     done: Color(0xFF16A34A),
     doneContainer: Color(0xFFDCFCE7),
     overdue: Color(0xFFDC2626),
@@ -26,8 +26,8 @@ class StatusColors extends ThemeExtension<StatusColors> {
   static const dark = StatusColors(
     todo: Color(0xFF94A3B8),
     todoContainer: Color(0xFF1E293B),
-    inProgress: Color(0xFF60A5FA),
-    inProgressContainer: Color(0xFF172554),
+    inProgress: Color(0xFFFACC15),
+    inProgressContainer: Color(0xFF3A3104),
     done: Color(0xFF4ADE80),
     doneContainer: Color(0xFF052E16),
     overdue: Color(0xFFF87171),
