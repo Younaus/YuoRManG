@@ -1,0 +1,325 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../tasks/domain/entities/task_query.dart';
+import '../../../tasks/presentation/providers/task_providers.dart';
+import '../../domain/entities/category.dart';
+import '../providers/category_providers.dart';
+import 'category_actions.dart';
+import 'category_colors.dart';
+import 'category_form_dialog.dart';
+
+/// "Tüm görevler / Kategorisiz" kısayolları + hiyerarşik kategori ağacı.
+/// Masaüstü yan menüsü, mobil çekmece ve Kategoriler sekmesi bu paneli paylaşır.
+class CategoryTreePanel extends ConsumerWidget {
+  const CategoryTreePanel({this.onScopeSelected, this.highlightSelection = true, super.key});
+
+  /// Seçimden sonra (ör. çekmeceyi kapatmak / görevler sekmesine geçmek için).
+  final ValueChanged<TaskScope>? onScopeSelected;
+
+  /// Görevler sekmesi dışındayken seçimi vurgulamamak için.
+  final bool highlightSelection;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scope = ref.watch(selectedScopeProvider);
+    final treeAsync = ref.watch(categoryTreeProvider);
+    final collapsed = ref.watch(collapsedCategoriesProvider);
+
+    void select(TaskScope s) {
+      ref.read(selectedScopeProvider.notifier).select(s);
+      onScopeSelected?.call(s);
+    }
+
+    bool isSelected(TaskScope s) => highlightSelection && scope == s;
+
+    List<Widget> buildNodes(List<Category> nodes, int depth) => [
+          for (final c in nodes) ...[
+            _CategoryTile(
+              category: c,
+              depth: depth,
+              selected: isSelected(TaskScope.category(c.id)),
+              expanded: !collapsed.contains(c.id),
+              onTap: () => select(TaskScope.category(c.id)),
+              onToggleExpanded: () => ref.read(collapsedCategoriesProvider.notifier).toggle(c.id),
+            ),
+            if (c.children.isNotEmpty && !collapsed.contains(c.id)) ...buildNodes(c.children, depth + 1),
+          ],
+        ];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+      children: [
+        _ScopeTile(
+          icon: Icons.inbox_outlined,
+          selectedIcon: Icons.inbox,
+          label: 'Tüm görevler',
+          selected: isSelected(const TaskScope.all()),
+          onTap: () => select(const TaskScope.all()),
+        ),
+        _ScopeTile(
+          icon: Icons.label_off_outlined,
+          selectedIcon: Icons.label_off,
+          label: 'Kategorisiz',
+          selected: isSelected(const TaskScope.uncategorized()),
+          onTap: () => select(const TaskScope.uncategorized()),
+        ),
+        const SizedBox(height: 16),
+        _SectionHeader(
+          title: 'Kategoriler',
+          action: IconButton(
+            key: const Key('categories.add'),
+            tooltip: 'Yeni kategori',
+            visualDensity: VisualDensity.compact,
+            iconSize: 20,
+            icon: const Icon(Icons.add),
+            onPressed: () => showCategoryFormDialog(context),
+          ),
+        ),
+        ...treeAsync.when(
+          skipLoadingOnReload: true,
+          data: (tree) => tree.isEmpty
+              ? [const _Hint('Henüz kategori yok. Görevlerinizi gruplamak için + ile ekleyin.')]
+              : buildNodes(tree.roots, 0),
+          loading: () => const [
+            Padding(padding: EdgeInsets.symmetric(vertical: 16), child: LinearProgressIndicator()),
+          ],
+          error: (e, _) => [
+            const _Hint('Kategoriler yüklenemedi.'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(onPressed: () => ref.invalidate(categoryTreeProvider), child: const Text('Tekrar dene')),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.action});
+
+  final String title;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, bottom: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ?action,
+        ],
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: Text(text, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+    );
+  }
+}
+
+/// Seçilebilir satırların ortak görünümü.
+class _SelectableRow extends StatelessWidget {
+  const _SelectableRow({required this.selected, required this.onTap, required this.child, this.onLongPress});
+
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Material(
+        color: selected ? scheme.secondaryContainer : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: SizedBox(height: 40, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScopeTile extends StatelessWidget {
+  const _ScopeTile({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurfaceVariant;
+    return _SelectableRow(
+      selected: selected,
+      onTap: onTap,
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          Icon(selected ? selectedIcon : icon, size: 20, color: fg),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: selected ? fg : theme.colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryTile extends ConsumerStatefulWidget {
+  const _CategoryTile({
+    required this.category,
+    required this.depth,
+    required this.selected,
+    required this.expanded,
+    required this.onTap,
+    required this.onToggleExpanded,
+  });
+
+  final Category category;
+  final int depth;
+  final bool selected;
+  final bool expanded;
+  final VoidCallback onTap;
+  final VoidCallback onToggleExpanded;
+
+  @override
+  ConsumerState<_CategoryTile> createState() => _CategoryTileState();
+}
+
+enum _CategoryAction { addChild, delete }
+
+class _CategoryTileState extends ConsumerState<_CategoryTile> {
+  bool _hovered = false;
+  final _menuKey = GlobalKey<PopupMenuButtonState<_CategoryAction>>();
+
+  void _onAction(_CategoryAction action) {
+    switch (action) {
+      case _CategoryAction.addChild:
+        showCategoryFormDialog(context, parentId: widget.category.id);
+      case _CategoryAction.delete:
+        confirmAndDeleteCategory(context, ref, widget.category);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = widget.category;
+    final hasChildren = c.children.isNotEmpty;
+    final fg = widget.selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: _SelectableRow(
+        selected: widget.selected,
+        onTap: widget.onTap,
+        onLongPress: () => _menuKey.currentState?.showButtonMenu(),
+        child: Row(
+          children: [
+            SizedBox(width: 4 + widget.depth * 16.0),
+            SizedBox(
+              width: 28,
+              child: hasChildren
+                  ? IconButton(
+                      tooltip: widget.expanded ? 'Daralt' : 'Genişlet',
+                      padding: EdgeInsets.zero,
+                      iconSize: 18,
+                      visualDensity: VisualDensity.compact,
+                      icon: AnimatedRotation(
+                        turns: widget.expanded ? 0.25 : 0,
+                        duration: const Duration(milliseconds: 150),
+                        child: Icon(Icons.chevron_right, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      onPressed: widget.onToggleExpanded,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 4),
+            CategoryDot(hex: c.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                c.name,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: fg,
+                  fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+            // Menü: fareyle üzerine gelince / seçiliyken görünür; dokunmatikte uzun basınca açılır.
+            Opacity(
+              opacity: _hovered || widget.selected ? 1 : 0,
+              child: PopupMenuButton<_CategoryAction>(
+                key: _menuKey,
+                tooltip: 'Kategori işlemleri',
+                iconSize: 18,
+                padding: EdgeInsets.zero,
+                icon: Icon(Icons.more_horiz, color: theme.colorScheme.onSurfaceVariant),
+                onSelected: _onAction,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: _CategoryAction.addChild,
+                    child: ListTile(leading: Icon(Icons.create_new_folder_outlined), title: Text('Alt kategori ekle')),
+                  ),
+                  PopupMenuItem(
+                    value: _CategoryAction.delete,
+                    child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Sil')),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
