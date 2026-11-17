@@ -29,8 +29,7 @@ void main() {
       ],
     );
     addTearDown(c.dispose);
-    // autoDispose olmayan sağlayıcılar için dinleyici tutmak gerekmez ama visible için tutalım.
-    c.listen(visibleTasksProvider, (_, _) {});
+    c.listen(taskListProvider, (_, _) {});
   });
 
   List<String> ids() => c.read(taskListProvider).value!.items.map((t) => t.id).toList();
@@ -121,14 +120,6 @@ void main() {
     expect(ids().length, 60);
     expect(ids().toSet().length, 60, reason: 'tekrar eden kayıt yok');
     expect(c.read(taskListProvider).value!.hasMore, isFalse);
-  });
-
-  test('arama yüklenmiş görevleri başlık ve açıklamada filtreler', () async {
-    await c.read(taskListProvider.future);
-    c.read(taskFilterProvider.notifier).setSearch('HEDEF');
-    expect(c.read(visibleTasksProvider).value!.map((t) => t.id), ['t1']);
-    c.read(taskFilterProvider.notifier).setSearch('api');
-    expect(c.read(visibleTasksProvider).value!.map((t) => t.id), ['t2']);
   });
 
   test('create sonrası liste yenilenir ve yeni görev en üstte', () async {

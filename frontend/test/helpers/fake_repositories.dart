@@ -98,6 +98,8 @@ class FakeTaskRepository implements TaskRepository {
     _maybeFail();
     Iterable<Task> result = tasks;
     if (query.status != null) result = result.where((t) => t.status == query.status);
+    final search = query.search;
+    if (search != null && search.trim().isNotEmpty) result = result.where((t) => _titleMatches(t.title, search));
     result = switch (query.scope) {
       AllTasksScope() => result,
       UncategorizedScope() => result.where((t) => t.categoryId == null),
@@ -161,6 +163,28 @@ class FakeTaskRepository implements TaskRepository {
     _maybeFail();
     tasks.removeWhere((t) => t.id == id);
   }
+}
+
+// --- Backend araması (utils/search.ts) ile aynı kurallar ------------------------
+// Kelime öneki, yalnızca başlıkta; Türkçe büyük/küçük harf ve karakter duyarsız.
+
+const _fold = {'ı': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c'};
+
+String _normalize(String s) => s
+    .replaceAll('I', 'ı')
+    .replaceAll('İ', 'i')
+    .toLowerCase()
+    .split('')
+    .map((ch) => _fold[ch] ?? ch)
+    .join();
+
+List<String> _words(String s) =>
+    _normalize(s).split(RegExp(r'[^\p{L}\p{N}]+', unicode: true)).where((w) => w.isNotEmpty).toList();
+
+bool _titleMatches(String title, String query) {
+  final queryWords = _words(query);
+  final titleWords = _words(title);
+  return queryWords.every((q) => titleWords.any((t) => t.startsWith(q)));
 }
 
 // --- Örnek veri ---------------------------------------------------------------

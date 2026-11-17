@@ -311,7 +311,8 @@ as String,
 mixin _$TaskQuery {
 
  TaskScope get scope; TaskStatus? get status; TaskSort get sort;/// Kategori seçiliyken alt kategorilerin görevleri de dahil edilsin mi.
- bool get includeSubcategories; int get limit; String? get cursor;
+ bool get includeSubcategories;/// Başlıkta kelime öneki araması (sunucuda; büyük/küçük harf ve Türkçe karakter duyarsız).
+ String? get search; int get limit; String? get cursor;
 /// Create a copy of TaskQuery
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -322,16 +323,16 @@ $TaskQueryCopyWith<TaskQuery> get copyWith => _$TaskQueryCopyWithImpl<TaskQuery>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskQuery&&(identical(other.scope, scope) || other.scope == scope)&&(identical(other.status, status) || other.status == status)&&(identical(other.sort, sort) || other.sort == sort)&&(identical(other.includeSubcategories, includeSubcategories) || other.includeSubcategories == includeSubcategories)&&(identical(other.limit, limit) || other.limit == limit)&&(identical(other.cursor, cursor) || other.cursor == cursor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskQuery&&(identical(other.scope, scope) || other.scope == scope)&&(identical(other.status, status) || other.status == status)&&(identical(other.sort, sort) || other.sort == sort)&&(identical(other.includeSubcategories, includeSubcategories) || other.includeSubcategories == includeSubcategories)&&(identical(other.search, search) || other.search == search)&&(identical(other.limit, limit) || other.limit == limit)&&(identical(other.cursor, cursor) || other.cursor == cursor));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,scope,status,sort,includeSubcategories,limit,cursor);
+int get hashCode => Object.hash(runtimeType,scope,status,sort,includeSubcategories,search,limit,cursor);
 
 @override
 String toString() {
-  return 'TaskQuery(scope: $scope, status: $status, sort: $sort, includeSubcategories: $includeSubcategories, limit: $limit, cursor: $cursor)';
+  return 'TaskQuery(scope: $scope, status: $status, sort: $sort, includeSubcategories: $includeSubcategories, search: $search, limit: $limit, cursor: $cursor)';
 }
 
 
@@ -342,7 +343,7 @@ abstract mixin class $TaskQueryCopyWith<$Res>  {
   factory $TaskQueryCopyWith(TaskQuery value, $Res Function(TaskQuery) _then) = _$TaskQueryCopyWithImpl;
 @useResult
 $Res call({
- TaskScope scope, TaskStatus? status, TaskSort sort, bool includeSubcategories, int limit, String? cursor
+ TaskScope scope, TaskStatus? status, TaskSort sort, bool includeSubcategories, String? search, int limit, String? cursor
 });
 
 
@@ -359,13 +360,14 @@ class _$TaskQueryCopyWithImpl<$Res>
 
 /// Create a copy of TaskQuery
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? scope = null,Object? status = freezed,Object? sort = null,Object? includeSubcategories = null,Object? limit = null,Object? cursor = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? scope = null,Object? status = freezed,Object? sort = null,Object? includeSubcategories = null,Object? search = freezed,Object? limit = null,Object? cursor = freezed,}) {
   return _then(_self.copyWith(
 scope: null == scope ? _self.scope : scope // ignore: cast_nullable_to_non_nullable
 as TaskScope,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TaskStatus?,sort: null == sort ? _self.sort : sort // ignore: cast_nullable_to_non_nullable
 as TaskSort,includeSubcategories: null == includeSubcategories ? _self.includeSubcategories : includeSubcategories // ignore: cast_nullable_to_non_nullable
-as bool,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
+as bool,search: freezed == search ? _self.search : search // ignore: cast_nullable_to_non_nullable
+as String?,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
 as int,cursor: freezed == cursor ? _self.cursor : cursor // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -461,10 +463,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  int limit,  String? cursor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  String? search,  int limit,  String? cursor)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaskQuery() when $default != null:
-return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.limit,_that.cursor);case _:
+return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.search,_that.limit,_that.cursor);case _:
   return orElse();
 
 }
@@ -482,10 +484,10 @@ return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  int limit,  String? cursor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  String? search,  int limit,  String? cursor)  $default,) {final _that = this;
 switch (_that) {
 case _TaskQuery():
-return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.limit,_that.cursor);case _:
+return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.search,_that.limit,_that.cursor);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -502,10 +504,10 @@ return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  int limit,  String? cursor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( TaskScope scope,  TaskStatus? status,  TaskSort sort,  bool includeSubcategories,  String? search,  int limit,  String? cursor)?  $default,) {final _that = this;
 switch (_that) {
 case _TaskQuery() when $default != null:
-return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.limit,_that.cursor);case _:
+return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_that.search,_that.limit,_that.cursor);case _:
   return null;
 
 }
@@ -517,7 +519,7 @@ return $default(_that.scope,_that.status,_that.sort,_that.includeSubcategories,_
 
 
 class _TaskQuery implements TaskQuery {
-  const _TaskQuery({this.scope = const TaskScope.all(), this.status, this.sort = TaskSort.createdAt, this.includeSubcategories = false, this.limit = 50, this.cursor});
+  const _TaskQuery({this.scope = const TaskScope.all(), this.status, this.sort = TaskSort.createdAt, this.includeSubcategories = false, this.search, this.limit = 50, this.cursor});
   
 
 @override@JsonKey() final  TaskScope scope;
@@ -525,6 +527,8 @@ class _TaskQuery implements TaskQuery {
 @override@JsonKey() final  TaskSort sort;
 /// Kategori seçiliyken alt kategorilerin görevleri de dahil edilsin mi.
 @override@JsonKey() final  bool includeSubcategories;
+/// Başlıkta kelime öneki araması (sunucuda; büyük/küçük harf ve Türkçe karakter duyarsız).
+@override final  String? search;
 @override@JsonKey() final  int limit;
 @override final  String? cursor;
 
@@ -538,16 +542,16 @@ _$TaskQueryCopyWith<_TaskQuery> get copyWith => __$TaskQueryCopyWithImpl<_TaskQu
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskQuery&&(identical(other.scope, scope) || other.scope == scope)&&(identical(other.status, status) || other.status == status)&&(identical(other.sort, sort) || other.sort == sort)&&(identical(other.includeSubcategories, includeSubcategories) || other.includeSubcategories == includeSubcategories)&&(identical(other.limit, limit) || other.limit == limit)&&(identical(other.cursor, cursor) || other.cursor == cursor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskQuery&&(identical(other.scope, scope) || other.scope == scope)&&(identical(other.status, status) || other.status == status)&&(identical(other.sort, sort) || other.sort == sort)&&(identical(other.includeSubcategories, includeSubcategories) || other.includeSubcategories == includeSubcategories)&&(identical(other.search, search) || other.search == search)&&(identical(other.limit, limit) || other.limit == limit)&&(identical(other.cursor, cursor) || other.cursor == cursor));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,scope,status,sort,includeSubcategories,limit,cursor);
+int get hashCode => Object.hash(runtimeType,scope,status,sort,includeSubcategories,search,limit,cursor);
 
 @override
 String toString() {
-  return 'TaskQuery(scope: $scope, status: $status, sort: $sort, includeSubcategories: $includeSubcategories, limit: $limit, cursor: $cursor)';
+  return 'TaskQuery(scope: $scope, status: $status, sort: $sort, includeSubcategories: $includeSubcategories, search: $search, limit: $limit, cursor: $cursor)';
 }
 
 
@@ -558,7 +562,7 @@ abstract mixin class _$TaskQueryCopyWith<$Res> implements $TaskQueryCopyWith<$Re
   factory _$TaskQueryCopyWith(_TaskQuery value, $Res Function(_TaskQuery) _then) = __$TaskQueryCopyWithImpl;
 @override @useResult
 $Res call({
- TaskScope scope, TaskStatus? status, TaskSort sort, bool includeSubcategories, int limit, String? cursor
+ TaskScope scope, TaskStatus? status, TaskSort sort, bool includeSubcategories, String? search, int limit, String? cursor
 });
 
 
@@ -575,13 +579,14 @@ class __$TaskQueryCopyWithImpl<$Res>
 
 /// Create a copy of TaskQuery
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? scope = null,Object? status = freezed,Object? sort = null,Object? includeSubcategories = null,Object? limit = null,Object? cursor = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? scope = null,Object? status = freezed,Object? sort = null,Object? includeSubcategories = null,Object? search = freezed,Object? limit = null,Object? cursor = freezed,}) {
   return _then(_TaskQuery(
 scope: null == scope ? _self.scope : scope // ignore: cast_nullable_to_non_nullable
 as TaskScope,status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TaskStatus?,sort: null == sort ? _self.sort : sort // ignore: cast_nullable_to_non_nullable
 as TaskSort,includeSubcategories: null == includeSubcategories ? _self.includeSubcategories : includeSubcategories // ignore: cast_nullable_to_non_nullable
-as bool,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
+as bool,search: freezed == search ? _self.search : search // ignore: cast_nullable_to_non_nullable
+as String?,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
 as int,cursor: freezed == cursor ? _self.cursor : cursor // ignore: cast_nullable_to_non_nullable
 as String?,
   ));

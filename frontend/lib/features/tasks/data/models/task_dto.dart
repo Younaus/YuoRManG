@@ -67,6 +67,11 @@ Map<String, dynamic> taskDraftToJson(TaskDraft d) => {
       'categoryId': d.categoryId,
     };
 
+String? _nonBlank(String? s) {
+  final trimmed = s?.trim();
+  return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+}
+
 /// Sorgu nesnesini `GET /tasks` parametrelerine çevirir.
 Map<String, dynamic> taskQueryToParams(TaskQuery q) => {
       if (q.status != null) 'status': q.status!.apiValue,
@@ -78,7 +83,8 @@ Map<String, dynamic> taskQueryToParams(TaskQuery q) => {
             if (q.includeSubcategories) 'includeSubcategories': 'true',
           },
       },
+      'q': ?_nonBlank(q.search),
       'sort': q.sort.apiValue,
       'limit': q.limit,
-      if (q.cursor != null) 'cursor': q.cursor,
+      'cursor': ?q.cursor,
     };

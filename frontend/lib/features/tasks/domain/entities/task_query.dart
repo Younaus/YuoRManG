@@ -21,6 +21,8 @@ abstract class TaskQuery with _$TaskQuery {
     @Default(TaskSort.createdAt) TaskSort sort,
     /// Kategori seçiliyken alt kategorilerin görevleri de dahil edilsin mi.
     @Default(false) bool includeSubcategories,
+    /// Başlıkta kelime öneki araması (sunucuda; büyük/küçük harf ve Türkçe karakter duyarsız).
+    String? search,
     @Default(50) int limit,
     String? cursor,
   }) = _TaskQuery;

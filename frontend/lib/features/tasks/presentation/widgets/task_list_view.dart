@@ -87,8 +87,8 @@ class _TaskListViewState extends ConsumerState<TaskListView> {
 
   @override
   Widget build(BuildContext context) {
-    final tasks = ref.watch(visibleTasksProvider);
     final listState = ref.watch(taskListProvider);
+    final tasks = listState.whenData((s) => s.items);
     final filter = ref.watch(taskFilterProvider);
     final tree = ref.watch(categoryTreeProvider).value;
 

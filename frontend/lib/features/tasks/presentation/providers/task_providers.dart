@@ -91,7 +91,8 @@ class TaskListController extends AsyncNotifier<TaskListState> {
     if (ref.watch(currentUidProvider) == null) return const TaskListState();
 
     final scope = ref.watch(selectedScopeProvider);
-    final (status, sort) = ref.watch(taskFilterProvider.select((f) => (f.status, f.sort)));
+    // Arama metni (TaskSearchField'da 250 ms debounce) değişince liste sunucudan yeniden çekilir.
+    final (status, sort, search) = ref.watch(taskFilterProvider.select((f) => (f.status, f.sort, f.search.trim())));
 
     var includeSub = false;
     if (scope case CategoryScope(:final categoryId)) {
@@ -99,7 +100,13 @@ class TaskListController extends AsyncNotifier<TaskListState> {
       includeSub = subtree.length > 1 && subtree.length <= maxSubtreeForInclude;
     }
 
-    _query = TaskQuery(scope: scope, status: status, sort: sort, includeSubcategories: includeSub);
+    _query = TaskQuery(
+      scope: scope,
+      status: status,
+      sort: sort,
+      includeSubcategories: includeSub,
+      search: search.isEmpty ? null : search,
+    );
     final page = await ref.watch(taskRepositoryProvider).list(_query);
     return TaskListState(items: page.items, nextCursor: page.nextCursor);
   }
@@ -193,14 +200,3 @@ class TaskListController extends AsyncNotifier<TaskListState> {
 }
 
 final taskListProvider = AsyncNotifierProvider<TaskListController, TaskListState>(TaskListController.new);
-
-/// Arama metnine göre (yüklenmiş görevler üzerinde) filtrelenmiş liste.
-final visibleTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
-  final query = ref.watch(taskFilterProvider.select((f) => f.search)).trim().toLowerCase();
-  return ref.watch(taskListProvider).whenData((s) {
-    if (query.isEmpty) return s.items;
-    return s.items
-        .where((t) => t.title.toLowerCase().contains(query) || t.description.toLowerCase().contains(query))
-        .toList(growable: false);
-  });
-});
