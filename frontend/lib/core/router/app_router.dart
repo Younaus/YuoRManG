@@ -9,9 +9,9 @@ import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/categories/presentation/pages/categories_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/tasks/presentation/pages/tasks_page.dart';
+import '../layout/app_shell.dart';
 import '../widgets/not_found_page.dart';
 import 'app_routes.dart';
-import 'app_shell.dart';
 
 /// Oturum durumuna göre yönlendirme kararı (saf fonksiyon — test edilebilir).
 ///
