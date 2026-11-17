@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'core/network/retry_policy.dart';
 import 'core/storage/shared_preferences_provider.dart';
 
 Future<void> main() async {
@@ -20,6 +21,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
+      retry: appProviderRetry,
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
       child: const YouRManGApp(),
     ),

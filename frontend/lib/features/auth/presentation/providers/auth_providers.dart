@@ -13,3 +13,7 @@ final authRepositoryProvider = Provider<AuthRepository>(
 final authStateProvider = StreamProvider<AppUser?>(
   (ref) => ref.watch(authRepositoryProvider).authStateChanges(),
 );
+
+/// Oturumdaki kullanıcının uid'i. Veri sağlayıcıları bunu izler; kullanıcı değişince
+/// (çıkış / başka hesapla giriş) önceki kullanıcının verisi otomatik temizlenir.
+final currentUidProvider = Provider<String?>((ref) => ref.watch(authStateProvider.select((s) => s.value?.uid)));
