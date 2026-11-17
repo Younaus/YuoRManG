@@ -21,6 +21,17 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   @override
+  Future<Category> update(String id, {String? name, String? color, ParentChange? parent}) async {
+    final dto = await _remote.update(id, {
+      'name': ?name?.trim(),
+      'color': ?color,
+      // null değeri anlamlı (köke taşı) — yalnızca ParentChange verilmişse gönderilir.
+      if (parent != null) 'parentId': parent.parentId,
+    });
+    return dto.toEntity();
+  }
+
+  @override
   Future<void> delete(String id, {CategoryDeleteStrategy strategy = CategoryDeleteStrategy.cascade}) =>
       _remote.delete(id, strategy.name);
 }

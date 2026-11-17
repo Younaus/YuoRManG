@@ -51,6 +51,7 @@ class AppSidebar extends ConsumerWidget {
               Expanded(
                 child: CategoryTreePanel(
                   highlightSelection: onTasks,
+                  enableDragAndDrop: true,
                   onScopeSelected: (_) => navigationShell.goBranch(_tasksBranch),
                 ),
               ),

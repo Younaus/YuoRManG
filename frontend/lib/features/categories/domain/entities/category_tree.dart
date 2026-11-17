@@ -63,4 +63,18 @@ class CategoryTree {
     visit(root);
     return ids;
   }
+
+  /// `id` kategorisi `newParentId` altına taşınabilir mi? (kendisi veya kendi alt dalı olamaz)
+  bool canMoveTo(String id, String? newParentId) {
+    if (!_byId.containsKey(id)) return false;
+    if (newParentId == null) return true;
+    if (!_byId.containsKey(newParentId)) return false;
+    return !subtreeIds(id).contains(newParentId);
+  }
+
+  /// Taşıma için geçerli üst kategori seçenekleri (kendisi ve alt dalı hariç).
+  List<FlatCategory> moveTargetsFor(String id) {
+    final excluded = subtreeIds(id).toSet();
+    return _flat.where((f) => !excluded.contains(f.category.id)).toList(growable: false);
+  }
 }

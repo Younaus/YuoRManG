@@ -11,8 +11,13 @@ import 'category_form_dialog.dart';
 
 /// "Tüm görevler / Kategorisiz" kısayolları + hiyerarşik kategori ağacı.
 /// Masaüstü yan menüsü, mobil çekmece ve Kategoriler sekmesi bu paneli paylaşır.
-class CategoryTreePanel extends ConsumerWidget {
-  const CategoryTreePanel({this.onScopeSelected, this.highlightSelection = true, super.key});
+class CategoryTreePanel extends ConsumerStatefulWidget {
+  const CategoryTreePanel({
+    this.onScopeSelected,
+    this.highlightSelection = true,
+    this.enableDragAndDrop = false,
+    super.key,
+  });
 
   /// Seçimden sonra (ör. çekmeceyi kapatmak / görevler sekmesine geçmek için).
   final ValueChanged<TaskScope>? onScopeSelected;
@@ -20,32 +25,53 @@ class CategoryTreePanel extends ConsumerWidget {
   /// Görevler sekmesi dışındayken seçimi vurgulamamak için.
   final bool highlightSelection;
 
+  /// Sürükle-bırak ile taşıma (masaüstü yan menü). Dokunmatikte kaydırmayla çakışmasın diye kapalı.
+  final bool enableDragAndDrop;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CategoryTreePanel> createState() => _CategoryTreePanelState();
+}
+
+class _CategoryTreePanelState extends ConsumerState<CategoryTreePanel> {
+  /// Sürüklenmekte olan kategori ("en üst seviye" bırakma alanını göstermek için).
+  Category? _dragging;
+
+  void _setDragging(Category? c) {
+    if (mounted && _dragging != c) setState(() => _dragging = c);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final scope = ref.watch(selectedScopeProvider);
     final treeAsync = ref.watch(categoryTreeProvider);
     final collapsed = ref.watch(collapsedCategoriesProvider);
+    final tree = treeAsync.value;
 
     void select(TaskScope s) {
       ref.read(selectedScopeProvider.notifier).select(s);
-      onScopeSelected?.call(s);
+      widget.onScopeSelected?.call(s);
     }
 
-    bool isSelected(TaskScope s) => highlightSelection && scope == s;
+    bool isSelected(TaskScope s) => widget.highlightSelection && scope == s;
 
     List<Widget> buildNodes(List<Category> nodes, int depth) => [
           for (final c in nodes) ...[
-            _CategoryTile(
-              category: c,
-              depth: depth,
-              selected: isSelected(TaskScope.category(c.id)),
-              expanded: !collapsed.contains(c.id),
-              onTap: () => select(TaskScope.category(c.id)),
-              onToggleExpanded: () => ref.read(collapsedCategoriesProvider.notifier).toggle(c.id),
+            _withDragAndDrop(
+              c,
+              _CategoryTile(
+                category: c,
+                depth: depth,
+                selected: isSelected(TaskScope.category(c.id)),
+                expanded: !collapsed.contains(c.id),
+                onTap: () => select(TaskScope.category(c.id)),
+                onToggleExpanded: () => ref.read(collapsedCategoriesProvider.notifier).toggle(c.id),
+              ),
             ),
             if (c.children.isNotEmpty && !collapsed.contains(c.id)) ...buildNodes(c.children, depth + 1),
           ],
         ];
+
+    final showRootDrop = widget.enableDragAndDrop && _dragging?.parentId != null && tree != null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
@@ -76,6 +102,8 @@ class CategoryTreePanel extends ConsumerWidget {
             onPressed: () => showCategoryFormDialog(context),
           ),
         ),
+        if (showRootDrop)
+          _RootDropZone(onAccept: (dragged) => moveCategory(context, ref, dragged, null)),
         ...treeAsync.when(
           skipLoadingOnReload: true,
           data: (tree) => tree.isEmpty
@@ -93,6 +121,108 @@ class CategoryTreePanel extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  /// Satırı hem sürüklenebilir hem de "buraya bırak → altına taşı" hedefi yapar.
+  Widget _withDragAndDrop(Category c, Widget tile) {
+    final tree = ref.read(categoryTreeProvider).value;
+    if (!widget.enableDragAndDrop || tree == null) return tile;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Draggable<Category>(
+      key: Key('category.drag.${c.id}'),
+      data: c,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      onDragStarted: () => _setDragging(c),
+      onDragEnd: (_) => _setDragging(null),
+      feedback: _DragFeedback(category: c),
+      childWhenDragging: Opacity(opacity: 0.4, child: tile),
+      child: DragTarget<Category>(
+        // Kendisi, kendi alt dalı ya da zaten bulunduğu üst kategori kabul edilmez.
+        onWillAcceptWithDetails: (d) => d.data.parentId != c.id && tree.canMoveTo(d.data.id, c.id),
+        onAcceptWithDetails: (d) => moveCategory(context, ref, d.data, c.id),
+        builder: (context, candidates, _) => AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: candidates.isNotEmpty ? scheme.primary.withValues(alpha: 0.10) : Colors.transparent,
+            border: Border.all(color: candidates.isNotEmpty ? scheme.primary : Colors.transparent, width: 1.5),
+          ),
+          child: tile,
+        ),
+      ),
+    );
+  }
+}
+
+class _RootDropZone extends StatelessWidget {
+  const _RootDropZone({required this.onAccept});
+
+  final ValueChanged<Category> onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return DragTarget<Category>(
+      key: const Key('categories.rootDrop'),
+      onWillAcceptWithDetails: (d) => d.data.parentId != null,
+      onAcceptWithDetails: (d) => onAccept(d.data),
+      builder: (context, candidates, _) {
+        final active = candidates.isNotEmpty;
+        final color = active ? scheme.primary : scheme.onSurfaceVariant;
+        return Container(
+          height: 40,
+          margin: const EdgeInsets.only(bottom: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: active ? scheme.primary.withValues(alpha: 0.10) : Colors.transparent,
+            border: Border.all(color: active ? scheme.primary : scheme.outlineVariant, width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.vertical_align_top, size: 18, color: color),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'En üst seviyeye taşı',
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(color: color),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DragFeedback extends StatelessWidget {
+  const _DragFeedback({required this.category});
+
+  final Category category;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      elevation: 6,
+      borderRadius: BorderRadius.circular(8),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CategoryDot(hex: category.color),
+            const SizedBox(width: 10),
+            Text(category.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -233,7 +363,7 @@ class _CategoryTile extends ConsumerStatefulWidget {
   ConsumerState<_CategoryTile> createState() => _CategoryTileState();
 }
 
-enum _CategoryAction { addChild, delete }
+enum _CategoryAction { edit, addChild, delete }
 
 class _CategoryTileState extends ConsumerState<_CategoryTile> {
   bool _hovered = false;
@@ -241,6 +371,8 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
 
   void _onAction(_CategoryAction action) {
     switch (action) {
+      case _CategoryAction.edit:
+        showCategoryFormDialog(context, category: widget.category);
       case _CategoryAction.addChild:
         showCategoryFormDialog(context, parentId: widget.category.id);
       case _CategoryAction.delete:
@@ -306,6 +438,11 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
                 icon: Icon(Icons.more_horiz, color: theme.colorScheme.onSurfaceVariant),
                 onSelected: _onAction,
                 itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    key: Key('category.menu.edit'),
+                    value: _CategoryAction.edit,
+                    child: ListTile(leading: Icon(Icons.drive_file_move_outline), title: Text('Düzenle / taşı')),
+                  ),
                   PopupMenuItem(
                     value: _CategoryAction.addChild,
                     child: ListTile(leading: Icon(Icons.create_new_folder_outlined), title: Text('Alt kategori ekle')),

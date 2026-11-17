@@ -3,18 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_exception.dart';
 import '../../domain/entities/category.dart';
+import '../../domain/entities/category_tree.dart';
+import '../../domain/repositories/category_repository.dart';
 import '../providers/category_providers.dart';
 import 'category_colors.dart';
 
-/// Yeni (alt) kategori oluşturma penceresi. Oluşturulan kategoriyi döner.
-Future<Category?> showCategoryFormDialog(BuildContext context, {String? parentId}) {
-  return showDialog<Category>(context: context, builder: (_) => _CategoryFormDialog(parentId: parentId));
+/// Kategori oluşturma veya düzenleme (ad, üst kategori = taşıma, renk) penceresi.
+/// [category] verilirse düzenleme modundadır. Kaydedilen kategoriyi döner.
+Future<Category?> showCategoryFormDialog(BuildContext context, {String? parentId, Category? category}) {
+  return showDialog<Category>(
+    context: context,
+    builder: (_) => _CategoryFormDialog(parentId: parentId, category: category),
+  );
 }
 
 class _CategoryFormDialog extends ConsumerStatefulWidget {
-  const _CategoryFormDialog({this.parentId});
+  const _CategoryFormDialog({this.parentId, this.category});
 
   final String? parentId;
+  final Category? category;
 
   @override
   ConsumerState<_CategoryFormDialog> createState() => _CategoryFormDialogState();
@@ -22,11 +29,15 @@ class _CategoryFormDialog extends ConsumerStatefulWidget {
 
 class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  late String? _parentId = widget.parentId;
-  String _color = categoryPalette.first;
+  // Düzenlemede mevcut ad tamamen seçili gelir; yazınca yerine geçer.
+  late final _name = TextEditingController(text: widget.category?.name)
+    ..selection = TextSelection(baseOffset: 0, extentOffset: widget.category?.name.length ?? 0);
+  late String? _parentId = widget.category != null ? widget.category!.parentId : widget.parentId;
+  late String _color = widget.category?.color ?? categoryPalette.first;
   bool _saving = false;
   String? _error;
+
+  bool get _isEdit => widget.category != null;
 
   @override
   void dispose() {
@@ -40,13 +51,33 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
       _saving = true;
       _error = null;
     });
+    final controller = ref.read(categoryTreeProvider.notifier);
     try {
-      final created = await ref
-          .read(categoryTreeProvider.notifier)
-          .create(name: _name.text, parentId: _parentId, color: _color);
-      if (mounted) Navigator.of(context).pop(created);
+      final Category saved;
+      if (_isEdit) {
+        final original = widget.category!;
+        final name = _name.text.trim();
+        final nameChanged = name != original.name;
+        final colorChanged = _color != original.color;
+        final parentChanged = _parentId != original.parentId;
+        if (!nameChanged && !colorChanged && !parentChanged) {
+          Navigator.of(context).pop(original);
+          return;
+        }
+        saved = await controller.updateCategory(
+          original.id,
+          name: nameChanged ? name : null,
+          color: colorChanged ? _color : null,
+          parent: parentChanged ? ParentChange(_parentId) : null,
+        );
+      } else {
+        saved = await controller.create(name: _name.text, parentId: _parentId, color: _color);
+      }
+      if (mounted) Navigator.of(context).pop(saved);
     } on ApiException catch (e) {
-      setState(() => _error = e.code == 'CONFLICT' ? 'Bu seviyede aynı adda bir kategori zaten var.' : e.message);
+      if (mounted) {
+        setState(() => _error = e.code == 'CONFLICT' ? 'Bu seviyede aynı adda bir kategori zaten var.' : e.message);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -56,10 +87,18 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tree = ref.watch(categoryTreeProvider).value;
-    final options = tree?.flattened ?? const [];
+    // Düzenlemede kategori kendi altına / alt dalına taşınamaz.
+    final List<FlatCategory> options =
+        tree == null ? const [] : (_isEdit ? tree.moveTargetsFor(widget.category!.id) : tree.flattened);
 
     return AlertDialog(
-      title: Text(widget.parentId == null ? 'Yeni kategori' : 'Yeni alt kategori'),
+      title: Text(
+        _isEdit
+            ? 'Kategoriyi düzenle'
+            : widget.parentId == null
+                ? 'Yeni kategori'
+                : 'Yeni alt kategori',
+      ),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -74,6 +113,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
                 autofocus: true,
                 decoration: const InputDecoration(labelText: 'Ad'),
                 maxLength: 100,
+                buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) => _submit(),
                 validator: (v) => (v?.trim().isEmpty ?? true) ? 'Ad gerekli' : null,
@@ -122,7 +162,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
           onPressed: _saving ? null : _submit,
           child: _saving
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Oluştur'),
+              : Text(_isEdit ? 'Kaydet' : 'Oluştur'),
         ),
       ],
     );

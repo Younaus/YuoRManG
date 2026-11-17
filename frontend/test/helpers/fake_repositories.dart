@@ -36,6 +36,27 @@ class FakeCategoryRepository implements CategoryRepository {
     return c;
   }
 
+  /// Backend gibi: döngü → 400, aynı seviyede aynı ad → 409, taşınınca yeni seviyenin sonuna eklenir.
+  @override
+  Future<Category> update(String id, {String? name, String? color, ParentChange? parent}) async {
+    final i = _flat.indexWhere((c) => c.id == id);
+    final current = _flat[i];
+    final newParent = parent != null ? parent.parentId : current.parentId;
+    if (parent != null && !tree.canMoveTo(id, newParent)) {
+      throw const ApiException(statusCode: 400, code: 'BAD_REQUEST', message: 'cycle');
+    }
+    final newName = name ?? current.name;
+    if (_flat.any((c) => c.id != id && c.parentId == newParent && c.name.toLowerCase() == newName.toLowerCase())) {
+      throw const ApiException(statusCode: 409, code: 'CONFLICT', message: 'duplicate');
+    }
+    return _flat[i] = current.copyWith(
+      name: newName,
+      color: color ?? current.color,
+      parentId: newParent,
+      order: parent != null ? _flat.length + 100 : current.order,
+    );
+  }
+
   @override
   Future<void> delete(String id, {CategoryDeleteStrategy strategy = CategoryDeleteStrategy.cascade}) async {
     final ids = tree.subtreeIds(id);

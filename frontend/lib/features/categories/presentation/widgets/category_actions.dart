@@ -8,6 +8,26 @@ import '../../domain/entities/category.dart';
 import '../../domain/repositories/category_repository.dart';
 import '../providers/category_providers.dart';
 
+/// Kategoriyi başka bir kategorinin altına (veya `null` → en üst seviyeye) taşır ve sonucu bildirir.
+Future<void> moveCategory(BuildContext context, WidgetRef ref, Category category, String? newParentId) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final target = newParentId == null
+      ? 'en üst seviyeye'
+      : '"${ref.read(categoryTreeProvider).value?[newParentId]?.name ?? 'kategori'}" altına';
+  try {
+    await ref.read(categoryTreeProvider.notifier).updateCategory(category.id, parent: ParentChange(newParentId));
+    messenger.showSnackBar(SnackBar(content: Text('"${category.name}" $target taşındı')));
+  } on ApiException catch (e) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          e.code == 'CONFLICT' ? 'Hedef seviyede "${category.name}" adında bir kategori zaten var.' : e.message,
+        ),
+      ),
+    );
+  }
+}
+
 /// Onay alıp kategoriyi siler; seçili kapsam silinen dalda ise "Tüm görevler"e döner.
 Future<void> confirmAndDeleteCategory(BuildContext context, WidgetRef ref, Category category) async {
   final hasChildren = category.children.isNotEmpty;

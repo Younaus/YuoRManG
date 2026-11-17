@@ -26,6 +26,17 @@ class CategoryTreeController extends AsyncNotifier<CategoryTree> {
     return created;
   }
 
+  /// Ad / renk / konum günceller. Yeni üst kategori daraltılmışsa taşınan kategori görünsün diye açılır.
+  Future<Category> updateCategory(String id, {String? name, String? color, ParentChange? parent}) async {
+    final updated =
+        await ref.read(categoryRepositoryProvider).update(id, name: name, color: color, parent: parent);
+    final newParent = parent?.parentId;
+    if (newParent != null) ref.read(collapsedCategoriesProvider.notifier).expand(newParent);
+    ref.invalidateSelf();
+    await future;
+    return updated;
+  }
+
   /// Silinen kategorilerdeki görevler backend'de kategorisiz hale gelir.
   Future<void> delete(String id, {CategoryDeleteStrategy strategy = CategoryDeleteStrategy.cascade}) async {
     await ref.read(categoryRepositoryProvider).delete(id, strategy: strategy);
@@ -40,6 +51,10 @@ final categoryTreeProvider = AsyncNotifierProvider<CategoryTreeController, Categ
 class CollapsedCategoriesController extends Notifier<Set<String>> {
   @override
   Set<String> build() => const {};
+
+  void expand(String id) {
+    if (state.contains(id)) state = {...state}..remove(id);
+  }
 
   void toggle(String id) => state = state.contains(id) ? ({...state}..remove(id)) : {...state, id};
 }

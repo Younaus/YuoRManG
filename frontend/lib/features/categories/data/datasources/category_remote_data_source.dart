@@ -19,6 +19,11 @@ class CategoryRemoteDataSource {
         return CategoryDto.fromJson(res.data!);
       });
 
+  Future<CategoryDto> update(String id, Map<String, dynamic> body) => guardApi(() async {
+        final res = await _dio.patch<Map<String, dynamic>>('/categories/$id', data: body);
+        return CategoryDto.fromJson(res.data!);
+      });
+
   Future<void> delete(String id, String strategy) => guardApi(() async {
         await _dio.delete<void>('/categories/$id', queryParameters: {'strategy': strategy});
       });
