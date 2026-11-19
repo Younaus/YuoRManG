@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yourmang/features/auth/domain/entities/app_user.dart';
+import 'package:yourmang/features/tasks/domain/entities/task_draft.dart';
 import 'package:yourmang/features/tasks/domain/entities/task_status.dart';
 
 import '../../helpers/fake_auth_repository.dart';
@@ -28,23 +29,38 @@ void main() {
     return (dot.decoration! as BoxDecoration).color!;
   }
 
-  testWidgets('yeni görev formunda "Tamamlandı" seçeneği yok', (tester) async {
+  test('yeni görev taslağı varsayılan olarak "Devam ediyor"', () {
+    expect(TaskDraft.initialStatus, TaskStatus.inProgress);
+    expect(const TaskDraft(title: 'x').status, TaskStatus.inProgress);
+  });
+
+  testWidgets('yeni görev formunda durum seçici yok; görev "Devam ediyor" olarak kaydedilir', (tester) async {
     await pump(tester);
     await tester.tap(find.byKey(const Key('tasks.newTask')));
     await tester.pumpAndSettle();
 
-    expect(segment('Yapılacak'), findsOneWidget);
-    expect(segment('Devam ediyor'), findsOneWidget);
-    expect(segment('Tamamlandı'), findsNothing);
+    expect(find.byKey(const Key('taskForm.status')), findsNothing);
+    expect(find.text('Durum'), findsNothing);
+    expect(find.text('Görev "Devam ediyor" olarak eklenecek'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('taskForm.title')), 'Rapor yaz');
+    await tester.tap(find.byKey(const Key('taskForm.submit')));
+    await tester.pumpAndSettle();
+    final created = tasks.tasks.last;
+    expect(created.title, 'Rapor yaz');
+    expect(created.status, TaskStatus.inProgress);
   });
 
-  testWidgets('düzenleme formunda "Tamamlandı" seçilebilir', (tester) async {
+  testWidgets('düzenleme formunda tüm durumlar seçilebilir', (tester) async {
     await pump(tester);
     await tester.tap(find.text('Sprint planlaması'));
     await tester.pumpAndSettle();
 
     expect(find.text('Görevi düzenle'), findsOneWidget);
-    expect(segment('Tamamlandı'), findsOneWidget);
+    expect(find.byKey(const Key('taskForm.initialStatus')), findsNothing);
+    for (final s in TaskStatus.values) {
+      expect(segment(s.label), findsOneWidget);
+    }
     await tester.tap(segment('Tamamlandı'));
     await tester.tap(find.byKey(const Key('taskForm.submit')));
     await tester.pumpAndSettle();
@@ -53,14 +69,13 @@ void main() {
 
   testWidgets('seçili segmentteki durum noktası indigo zeminde yüksek kontrastlı', (tester) async {
     await pump(tester);
-    await tester.tap(find.byKey(const Key('tasks.newTask')));
+    await tester.tap(find.text('Sprint planlaması')); // durum: Yapılacak
     await tester.pumpAndSettle();
 
     final context = tester.element(find.byKey(const Key('taskForm.status')));
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
-    expect(dotColor(tester, TaskStatus.todo), onPrimary, reason: 'varsayılan seçim: Yapılacak');
-    final inProgressColor = dotColor(tester, TaskStatus.inProgress);
-    expect(inProgressColor, isNot(onPrimary));
+    expect(dotColor(tester, TaskStatus.todo), onPrimary);
+    expect(dotColor(tester, TaskStatus.inProgress), isNot(onPrimary));
 
     await tester.tap(segment('Devam ediyor'));
     await tester.pumpAndSettle();

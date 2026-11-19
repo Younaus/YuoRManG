@@ -210,7 +210,7 @@ return $default(_that.title,_that.description,_that.status,_that.dueDate,_that.c
 
 
 class _TaskDraft implements TaskDraft {
-  const _TaskDraft({required this.title, this.description = '', this.status = TaskStatus.todo, this.dueDate, this.categoryId});
+  const _TaskDraft({required this.title, this.description = '', this.status = TaskDraft.initialStatus, this.dueDate, this.categoryId});
   
 
 @override final  String title;

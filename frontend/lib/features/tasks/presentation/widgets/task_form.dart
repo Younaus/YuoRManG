@@ -60,7 +60,9 @@ class _TaskFormState extends ConsumerState<TaskForm> {
   late final _description = TextEditingController(text: widget.task?.description);
   late DateTime? _dueDate = widget.task?.dueDate;
   late String? _categoryId = widget.task != null ? widget.task!.categoryId : widget.defaultCategoryId;
-  late TaskStatus _status = widget.task?.status ?? TaskStatus.todo;
+
+  /// Yalnızca düzenlemede seçilebilir; yeni görevler [TaskDraft.initialStatus] ("Devam ediyor") ile başlar.
+  late TaskStatus _status = widget.task?.status ?? TaskDraft.initialStatus;
   bool _saving = false;
   String? _error;
 
@@ -232,16 +234,16 @@ class _TaskFormState extends ConsumerState<TaskForm> {
                       )
                     : Column(children: [dueField, const SizedBox(height: 14), categoryField]),
               ),
-              const SizedBox(height: 18),
-              Text('Durum', style: theme.textTheme.labelLarge),
-              const SizedBox(height: 8),
-              SegmentedButton<TaskStatus>(
-                key: const Key('taskForm.status'),
-                showSelectedIcon: false,
-                segments: [
-                  // "Tamamlandı" yalnızca düzenlemede: yeni görev zaten bitmiş olarak oluşturulmaz.
-                  for (final s in TaskStatus.values)
-                    if (_isEdit || s != TaskStatus.done)
+              // Durum yalnızca düzenlemede (ve kart üzerindeki rozet/tik ile) değiştirilir.
+              if (_isEdit) ...[
+                const SizedBox(height: 18),
+                Text('Durum', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 8),
+                SegmentedButton<TaskStatus>(
+                  key: const Key('taskForm.status'),
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final s in TaskStatus.values)
                       ButtonSegment(
                         value: s,
                         // Nokta etiketin içinde: dar ekranda "Devam ediyor" sığsın diye ikon boşluğu kullanılmaz.
@@ -269,10 +271,30 @@ class _TaskFormState extends ConsumerState<TaskForm> {
                           ],
                         ),
                       ),
-                ],
-                selected: {_status},
-                onSelectionChanged: (s) => setState(() => _status = s.first),
-              ),
+                  ],
+                  selected: {_status},
+                  onSelectionChanged: (s) => setState(() => _status = s.first),
+                ),
+              ] else ...[
+                const SizedBox(height: 14),
+                Row(
+                  key: const Key('taskForm.initialStatus'),
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(color: context.statusColors.inProgress, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Görev "${_status.label}" olarak eklenecek',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 16),
                 Container(

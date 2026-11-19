@@ -238,7 +238,7 @@ void main() {
 
       await tester.enterText(find.byKey(const Key('taskForm.title')), 'Fatura öde');
       await tester.enterText(find.byKey(const Key('taskForm.description')), 'Elektrik\nve su');
-      await tester.tap(find.descendant(of: find.byKey(const Key('taskForm.status')), matching: find.text('Devam ediyor')));
+      expect(find.byKey(const Key('taskForm.status')), findsNothing, reason: 'oluşturmada durum seçici yok');
       await tester.tap(find.byKey(const Key('taskForm.submit')));
       await tester.pumpAndSettle();
 
@@ -246,7 +246,7 @@ void main() {
       final created = tasks.tasks.last;
       expect(created.title, 'Fatura öde');
       expect(created.description, 'Elektrik\nve su');
-      expect(created.status, TaskStatus.inProgress);
+      expect(created.status, TaskStatus.inProgress, reason: 'yeni görev varsayılan olarak devam ediyor');
       expect(created.categoryId, 'personal', reason: 'seçili kategori varsayılan');
       expect(find.text('Fatura öde'), findsOneWidget);
     });
