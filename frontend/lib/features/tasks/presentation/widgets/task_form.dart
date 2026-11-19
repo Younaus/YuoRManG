@@ -239,25 +239,36 @@ class _TaskFormState extends ConsumerState<TaskForm> {
                 key: const Key('taskForm.status'),
                 showSelectedIcon: false,
                 segments: [
+                  // "Tamamlandı" yalnızca düzenlemede: yeni görev zaten bitmiş olarak oluşturulmaz.
                   for (final s in TaskStatus.values)
-                    ButtonSegment(
-                      value: s,
-                      // Nokta etiketin içinde: dar ekranda "Devam ediyor" sığsın diye ikon boşluğu kullanılmaz.
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(color: context.statusColors.of(s).fg, shape: BoxShape.circle),
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(s.label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                          ),
-                        ],
+                    if (_isEdit || s != TaskStatus.done)
+                      ButtonSegment(
+                        value: s,
+                        // Nokta etiketin içinde: dar ekranda "Devam ediyor" sığsın diye ikon boşluğu kullanılmaz.
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              key: Key('taskForm.status.dot.${s.apiValue}'),
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                // Seçili segmentin indigo zemininde kaybolmasın diye yüksek kontrast.
+                                color: s == _status ? theme.colorScheme.onPrimary : context.statusColors.of(s).fg,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.label,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
                 ],
                 selected: {_status},
                 onSelectionChanged: (s) => setState(() => _status = s.first),
@@ -300,8 +311,7 @@ class _TaskFormState extends ConsumerState<TaskForm> {
     required int currentLength,
     required bool isFocused,
     required int? maxLength,
-  }) =>
-      null;
+  }) => null;
 }
 
 /// "Bugün / Yarın" gibi yakın tarihlerde kısa, diğerlerinde uzun biçim.
