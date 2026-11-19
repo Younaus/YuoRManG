@@ -10,3 +10,7 @@ node_modules/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Firebase emülatör verileri (export/import dökümleri)
+.emulator-data/
+firebase-export-*/
