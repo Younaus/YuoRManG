@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../../../../core/desktop/corner_window_service.dart';
 import '../../../../core/layout/breakpoints.dart';
 import '../../../../core/theme/theme_mode_controller.dart';
 import '../../../../core/widgets/brand.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../tasks/presentation/providers/corner_mode_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -80,6 +82,22 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (ref.watch(cornerWindowServiceProvider).isSupported) ...[
+                    const SizedBox(height: 16),
+                    _Section(
+                      title: 'Masaüstü',
+                      child: SwitchListTile(
+                        key: const Key('settings.cornerOnMinimize'),
+                        secondary: const Icon(Icons.picture_in_picture_alt_outlined),
+                        title: const Text('Küçültünce köşe moduna geç'),
+                        subtitle: const Text(
+                          'Aktif görev varken pencereyi küçültünce otomatik olarak köşe moduna geç',
+                        ),
+                        value: ref.watch(cornerModeOnMinimizeProvider),
+                        onChanged: ref.read(cornerModeOnMinimizeProvider.notifier).set,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   _Section(
                     title: 'Geliştirici',

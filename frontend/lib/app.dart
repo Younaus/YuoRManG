@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_controller.dart';
+import 'features/tasks/presentation/widgets/corner_focus_pill.dart';
 
 class YouRManGApp extends ConsumerWidget {
   const YouRManGApp({super.key});
@@ -21,6 +22,8 @@ class YouRManGApp extends ConsumerWidget {
       locale: const Locale('tr', 'TR'),
       supportedLocales: const [Locale('tr', 'TR'), Locale('en', 'US')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // Windows Mini Köşe Modu: açıkken pencereyi köşe hapı doldurur (diğer platformlarda etkisiz).
+      builder: (context, child) => CornerModeHost(child: child ?? const SizedBox.shrink()),
     );
   }
 }

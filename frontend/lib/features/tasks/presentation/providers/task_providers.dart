@@ -141,12 +141,14 @@ class TaskListController extends AsyncNotifier<TaskListState> {
 
   Future<Task> create(TaskDraft draft) async {
     final task = await _repo.create(draft);
+    ref.invalidate(activeTasksProvider);
     if (ref.mounted) await refresh();
     return task;
   }
 
   Future<Task> edit(Task task, TaskDraft draft) async {
     final updated = await _repo.update(task.id, draft);
+    ref.invalidate(activeTasksProvider);
     if (ref.mounted) await refresh();
     return updated;
   }
@@ -162,6 +164,7 @@ class TaskListController extends AsyncNotifier<TaskListState> {
 
     try {
       final saved = await _repo.setStatus(task.id, status);
+      ref.invalidate(activeTasksProvider);
       if (!ref.mounted) return;
       final items = state.value?.items ?? const <Task>[];
       _setItems(items.map((t) => t.id == saved.id ? saved : t));
@@ -186,7 +189,17 @@ class TaskListController extends AsyncNotifier<TaskListState> {
     _setItems(items);
   }
 
-  Future<void> deleteRemote(Task task) => _repo.delete(task.id);
+  Future<void> deleteRemote(Task task) async {
+    await _repo.delete(task.id);
+    ref.invalidate(activeTasksProvider);
+  }
+
+  /// Başka bir yerde (ör. köşe modu) sunucuda güncellenen görevi listeye yansıtır.
+  void syncLocal(Task saved) {
+    final items = state.value?.items;
+    if (items == null || !items.any((t) => t.id == saved.id)) return;
+    _setItems(_applyFilter(items.map((t) => t.id == saved.id ? saved : t)));
+  }
 
   Iterable<Task> _applyFilter(Iterable<Task> items) {
     final status = _query.status;
@@ -200,3 +213,37 @@ class TaskListController extends AsyncNotifier<TaskListState> {
 }
 
 final taskListProvider = AsyncNotifierProvider<TaskListController, TaskListState>(TaskListController.new);
+
+
+// ---------------------------------------------------------------------------
+// Devam eden görevler (Mini Köşe Modu)
+// ---------------------------------------------------------------------------
+
+/// Seçili kapsam, filtre ve aramadan bağımsız olarak kullanıcının tüm `in_progress` görevleri.
+/// Ana listede durum değişince / görev eklenip silinince yenilenir.
+class ActiveTasksController extends AsyncNotifier<List<Task>> {
+  static const query = TaskQuery(status: TaskStatus.inProgress, limit: 20);
+
+  @override
+  Future<List<Task>> build() async {
+    if (ref.watch(currentUidProvider) == null) return const [];
+    final page = await ref.watch(taskRepositoryProvider).list(query);
+    return page.items;
+  }
+
+  /// Görevi tamamlar: listeden iyimser şekilde çıkar, ana listeye yansıtır; hata olursa geri alır.
+  Future<Task> complete(Task task) async {
+    final before = state.value ?? const <Task>[];
+    state = AsyncData([for (final t in before) if (t.id != task.id) t]);
+    try {
+      final saved = await ref.read(taskRepositoryProvider).setStatus(task.id, TaskStatus.done);
+      if (ref.exists(taskListProvider)) ref.read(taskListProvider.notifier).syncLocal(saved);
+      return saved;
+    } catch (_) {
+      if (ref.mounted) state = AsyncData(before);
+      rethrow;
+    }
+  }
+}
+
+final activeTasksProvider = AsyncNotifierProvider<ActiveTasksController, List<Task>>(ActiveTasksController.new);

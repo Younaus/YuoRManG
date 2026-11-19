@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,7 @@ extension PumpApp on WidgetTester {
     FakeCategoryRepository? categories,
     Map<String, Object> prefs = const {},
     Size size = const Size(800, 600),
+    List<Override> overrides = const [],
   }) async {
     await initializeDateFormatting('tr_TR');
     view.physicalSize = size * view.devicePixelRatio;
@@ -37,6 +39,7 @@ extension PumpApp on WidgetTester {
           authRepositoryProvider.overrideWithValue(auth),
           categoryRepositoryProvider.overrideWithValue(categoryRepo),
           taskRepositoryProvider.overrideWithValue(tasks ?? FakeTaskRepository(categories: categoryRepo)),
+          ...overrides,
         ],
         child: const YouRManGApp(),
       ),
