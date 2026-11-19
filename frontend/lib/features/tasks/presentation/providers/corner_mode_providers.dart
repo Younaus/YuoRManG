@@ -43,8 +43,11 @@ class CornerModeController extends Notifier<CornerModeState> {
   CornerModeState build() {
     final window = ref.watch(cornerWindowServiceProvider);
     final minimized = window.onMinimize.listen((_) => _onMinimized());
+    // Kapsül görev çubuğundan küçültülüp geri açılırsa ana pencereye dön.
+    final restoreRequested = window.onRestoreRequested.listen((_) => exit());
     ref.onDispose(() {
       minimized.cancel();
+      restoreRequested.cancel();
       _timer?.cancel();
     });
     // Oturum kapanırsa pencereyi normale döndür.
@@ -54,19 +57,35 @@ class CornerModeController extends Notifier<CornerModeState> {
     return const CornerModeState();
   }
 
+  /// Arayüz, pencere görünmez olduktan sonra kapsüle geçer; pencere işlemi başarısız olursa
+  /// servis pencereyi normale döndürür ve durum sıfırlanır — kullanıcı yarım bir durumda kalmaz.
   Future<void> enter({bool refresh = true}) async {
     if (!_window.isSupported || state.active) return;
     if (refresh) ref.invalidate(activeTasksProvider);
     _timer?.cancel();
-    state = const CornerModeState(active: true);
-    await _window.enterCornerMode();
+    try {
+      await _window.enterCornerMode(
+        onHidden: () {
+          if (ref.mounted) state = const CornerModeState(active: true);
+        },
+      );
+    } catch (_) {
+      if (ref.mounted) state = const CornerModeState();
+    }
   }
 
   Future<void> exit() async {
     _timer?.cancel();
     if (!state.active) return;
-    state = const CornerModeState();
-    await _window.exitCornerMode();
+    try {
+      await _window.exitCornerMode(
+        onHidden: () {
+          if (ref.mounted) state = const CornerModeState();
+        },
+      );
+    } finally {
+      if (ref.mounted && state.active) state = const CornerModeState();
+    }
   }
 
   /// Birden fazla aktif görev varsa sıradakine geçer (sonda başa döner).
@@ -138,11 +157,13 @@ final cornerFocusedTaskProvider = Provider<Task?>(
 );
 
 /// Ayarlar: "Aktif görev varken pencereyi küçültünce otomatik köşe moduna geç" (cihazda saklanır).
+/// Varsayılan olarak açık.
 class CornerModeOnMinimizeController extends Notifier<bool> {
   static const storageKey = 'corner_mode_on_minimize';
+  static const defaultValue = true;
 
   @override
-  bool build() => ref.watch(sharedPreferencesProvider).getBool(storageKey) ?? false;
+  bool build() => ref.watch(sharedPreferencesProvider).getBool(storageKey) ?? defaultValue;
 
   Future<void> set(bool value) async {
     state = value;

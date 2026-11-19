@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/desktop/corner_window_service.dart';
 import '../../../../core/theme/app_surfaces.dart';
-import '../../../../core/utils/text_case.dart';
 import '../providers/corner_mode_providers.dart';
 import '../providers/task_providers.dart';
 import 'status_style.dart';
@@ -59,8 +58,9 @@ class _CornerModeHostState extends ConsumerState<CornerModeHost> {
   }
 }
 
-/// Ekran köşesindeki soft hap: nabız atan amber nokta, tek satır başlık,
-/// sıradaki göreve geçiş, tek tıkla tamamlama ve tam pencereye dönüş.
+/// Ekran köşesindeki soft kapsül: nabız atan durum ikonu, tek satır görev başlığı,
+/// birden fazla aktif görev varsa sayı rozeti (dokununca sıradakine geçer),
+/// tek tıkla tamamlama ve ana pencereyi açma.
 class CornerFocusPill extends ConsumerStatefulWidget {
   const CornerFocusPill({super.key});
 
@@ -91,21 +91,24 @@ class _CornerFocusPillState extends ConsumerState<CornerFocusPill> {
     final completed = mode.completedTitle;
     final index = task == null ? -1 : tasks.indexWhere((t) => t.id == task.id);
 
-    final (String overline, Color overlineColor) = switch (()) {
-      _ when completed != null => ('Tamamlandı', status.done),
+    final (String title, Color titleColor) = switch (()) {
+      _ when completed != null => (completed, scheme.onSurfaceVariant),
       _ when mode.error != null => ('${mode.error} · tekrar dene', scheme.error),
-      _ when task == null && activeAsync.isLoading => ('Yükleniyor…', scheme.onSurfaceVariant),
-      _ when task == null => ('Köşe modu', scheme.onSurfaceVariant),
-      _ when tasks.length > 1 => ('Devam ediyor · ${index + 1}/${tasks.length}', status.inProgress),
-      _ => ('Devam ediyor', status.inProgress),
+      _ when task != null => (task.title, scheme.onSurface),
+      _ when activeAsync.isLoading => ('Yükleniyor…', scheme.onSurfaceVariant),
+      _ => ('Devam eden görev yok', scheme.onSurfaceVariant),
     };
-    final title = completed ?? task?.title ?? (activeAsync.isLoading ? '' : 'Devam eden görev yok');
 
-    final Widget leading = completed != null
-        ? Icon(Icons.check_circle_rounded, key: const Key('corner.completed'), size: 20, color: status.done)
+    final Widget statusIcon = completed != null
+        ? Icon(Icons.check_rounded, key: const Key('corner.completed'), size: 18, color: status.done)
         : task == null
         ? _Dot(color: scheme.outline)
         : _PulseDot(color: status.inProgress);
+    final statusBg = completed != null
+        ? status.doneContainer
+        : task == null
+        ? scheme.surfaceContainerHighest
+        : status.inProgressContainer;
 
     return MouseRegion(
       onEnter: (_) => _setHovered(true),
@@ -113,8 +116,7 @@ class _CornerFocusPillState extends ConsumerState<CornerFocusPill> {
       child: Material(
         key: const Key('corner.pill'),
         color: surfaces.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+        shape: StadiumBorder(
           side: BorderSide(color: _hovered ? scheme.primary.withValues(alpha: 0.45) : surfaces.border),
         ),
         clipBehavior: Clip.antiAlias,
@@ -122,58 +124,49 @@ class _CornerFocusPillState extends ConsumerState<CornerFocusPill> {
             .read(cornerWindowServiceProvider)
             .dragArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
                 child: Row(
                   children: [
-                    SizedBox.square(dimension: 22, child: Center(child: leading)),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(color: statusBg, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: statusIcon,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            toUpperTr(overline),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              letterSpacing: 0.8,
-                              fontWeight: FontWeight.w700,
-                              color: overlineColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            title,
-                            key: const Key('corner.title'),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: completed != null ? scheme.onSurfaceVariant : scheme.onSurface,
-                              decoration: completed != null ? TextDecoration.lineThrough : null,
-                              decorationColor: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        title,
+                        key: const Key('corner.title'),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                          decoration: completed != null ? TextDecoration.lineThrough : null,
+                          decorationColor: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                    if (completed == null && tasks.length > 1)
-                      _PillIconButton(
-                        key: const Key('corner.next'),
-                        icon: Icons.chevron_right_rounded,
-                        label: 'Sıradaki aktif görev',
+                    if (completed == null && tasks.length > 1) ...[
+                      const SizedBox(width: 6),
+                      _CountBadge(
+                        label: '${index + 1}/${tasks.length}',
+                        fg: status.inProgress,
+                        bg: status.inProgressContainer,
                         onPressed: controller.focusNext,
                       ),
+                    ],
                     if (completed == null && task != null) _CompleteButton(onPressed: controller.completeFocused),
                     _PillIconButton(
-                      key: const Key('corner.restore'),
+                      key: const Key('corner.open'),
                       icon: Icons.open_in_full_rounded,
-                      iconSize: 16,
-                      label: 'Tam pencereye dön',
+                      iconSize: 15,
+                      label: 'Ana pencereyi aç',
                       onPressed: controller.exit,
                     ),
                   ],
@@ -185,7 +178,44 @@ class _CornerFocusPillState extends ConsumerState<CornerFocusPill> {
   }
 }
 
-/// Küçük, kompakt ikon butonu. Pencere 68 px yüksekliğinde olduğu için tooltip yerine
+/// Birden fazla aktif görev varken "1/3" rozeti; dokununca sıradaki göreve geçer.
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.label, required this.fg, required this.bg, required this.onPressed});
+
+  final String label;
+  final Color fg;
+  final Color bg;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Sıradaki aktif görev ($label)',
+      excludeSemantics: true,
+      child: Material(
+        color: bg,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          key: const Key('corner.count'),
+          customBorder: const StadiumBorder(),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: 11.5, height: 1.1),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Küçük, kompakt ikon butonu. Kapsül 52 px yüksekliğinde olduğu için tooltip yerine
 /// yalnızca erişilebilirlik etiketi kullanılır.
 class _PillIconButton extends StatelessWidget {
   const _PillIconButton({
@@ -239,12 +269,12 @@ class _CompleteButtonState extends State<_CompleteButton> {
         onHover: (h) => setState(() => _hovered = h),
         radius: 18,
         child: SizedBox.square(
-          dimension: 34,
+          dimension: 32,
           child: Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _hovered ? done : Colors.transparent,

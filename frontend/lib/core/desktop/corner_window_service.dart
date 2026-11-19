@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'corner_window_platform_stub.dart' if (dart.library.io) 'corner_window_platform_io.dart' as platform;
 
-/// Köşe modunda pencere boyutu (mantıksal piksel).
-const cornerWindowSize = Size(300, 68);
+/// Köşe kapsülünün pencere boyutu (mantıksal piksel). Pencere bu boyutta kapsül biçimine kırpılır.
+const cornerWindowSize = Size(280, 52);
 
-/// Köşe modunda pencere opaklığı: fare dışarıdayken soluk, üzerindeyken neredeyse opak.
-const cornerIdleOpacity = 0.78;
-const cornerHoverOpacity = 0.98;
+/// Köşe modunda pencere opaklığı: fare uzaktayken çok soluk, üzerine gelince net.
+const cornerIdleOpacity = 0.72;
+const cornerHoverOpacity = 0.96;
 
-/// Ekran kenarı / görev çubuğu ile köşe penceresi arasındaki boşluk.
+/// Ekran kenarı / görev çubuğu ile köşe kapsülü arasındaki boşluk.
 const cornerScreenMargin = 16.0;
 
 /// "Mini Köşe Modu" için pencere işlemleri. Gerçek uygulama yalnızca Windows masaüstünde
@@ -19,14 +19,20 @@ abstract interface class CornerWindowService {
   /// Bu platformda köşe modu kullanılabilir mi (yalnızca Windows).
   bool get isSupported;
 
-  /// Kullanıcı pencereyi küçülttüğünde (köşe modundayken değil) tetiklenir.
+  /// Kullanıcı tam pencereyi küçülttüğünde tetiklenir (köşe modundayken değil).
   Stream<void> get onMinimize;
 
-  /// Pencereyi çerçevesiz, sabit boyutlu, her zaman üstte küçük bir hap olarak sağ alt köşeye alır.
-  Future<void> enterCornerMode();
+  /// Köşe kapsülü küçültülüp görev çubuğundan geri açıldığında tetiklenir:
+  /// kullanıcı ana pencereyi istiyor demektir.
+  Stream<void> get onRestoreRequested;
 
-  /// Önceki boyut, konum ve pencere stiline döner.
-  Future<void> exitCornerMode();
+  /// Pencereyi görünmez yapıp [onHidden]'ı çağırır (arayüz kapsüle geçer), ardından
+  /// çerçevesiz, sabit boyutlu, her zaman üstte bir kapsül olarak sağ alt köşede yumuşakça gösterir.
+  Future<void> enterCornerMode({VoidCallback? onHidden});
+
+  /// Pencereyi görünmez yapıp [onHidden]'ı çağırır (arayüz tam ekrana döner), ardından
+  /// önceki boyut, konum ve pencere stiliyle geri getirir. Hata olsa bile pencereyi görünür bırakır.
+  Future<void> exitCornerMode({VoidCallback? onHidden});
 
   Future<void> setOpacity(double opacity);
 
@@ -34,7 +40,7 @@ abstract interface class CornerWindowService {
   Widget dragArea({required Widget child});
 }
 
-/// Desteklenmeyen platformlar ve testler: hiçbir şey yapmaz.
+/// Desteklenmeyen platformlar ve testler: pencereye dokunmaz, yalnızca geri çağrıları çalıştırır.
 class NoopCornerWindowService implements CornerWindowService {
   const NoopCornerWindowService();
 
@@ -45,10 +51,13 @@ class NoopCornerWindowService implements CornerWindowService {
   Stream<void> get onMinimize => const Stream.empty();
 
   @override
-  Future<void> enterCornerMode() async {}
+  Stream<void> get onRestoreRequested => const Stream.empty();
 
   @override
-  Future<void> exitCornerMode() async {}
+  Future<void> enterCornerMode({VoidCallback? onHidden}) async => onHidden?.call();
+
+  @override
+  Future<void> exitCornerMode({VoidCallback? onHidden}) async => onHidden?.call();
 
   @override
   Future<void> setOpacity(double opacity) async {}
