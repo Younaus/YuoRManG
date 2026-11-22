@@ -32,7 +32,7 @@ void main() {
       'returnSecureToken': true,
     });
     final dio = Dio(BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
+      baseUrl: AppConfig.emulatorApiBaseUrl, // varsayılan prod olsa da bu test yalnızca emülatöre gider
       headers: {'Authorization': 'Bearer ${signUp.data!['idToken']}'},
       contentType: Headers.jsonContentType,
     ));

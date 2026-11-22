@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "674107966299",
+    "project_id": "yourmang",
+    "storage_bucket": "yourmang.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:674107966299:android:f1507e6c2294f112dbd07e",
+        "android_client_info": {
+          "package_name": "com.yourmang.yourmang"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "674107966299-8qhg2f5dnh8eqh924kjumoplrj1qt9ad.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCO_UtE_ncpSv52Ds23R0xbEoZqotkQdeo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "674107966299-8qhg2f5dnh8eqh924kjumoplrj1qt9ad.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
