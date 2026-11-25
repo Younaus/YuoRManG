@@ -14,6 +14,7 @@ import '../../../categories/presentation/widgets/category_tree_panel.dart';
 import '../../domain/entities/task_query.dart';
 import '../providers/task_providers.dart';
 import '../widgets/corner_focus_pill.dart';
+import '../widgets/sync_widgets.dart';
 import '../widgets/task_filter_bar.dart';
 import '../widgets/task_form.dart';
 import '../widgets/task_list_view.dart';
@@ -21,7 +22,7 @@ import '../widgets/task_overview_card.dart';
 import '../widgets/task_search_field.dart';
 
 /// Ana görev ekranı.
-///  - Masaüstü: ferah başlık (yol + başlık), arama, köşe modu (Windows) ve tema düğmesi;
+///  - Masaüstü: ferah başlık (yol + başlık), arama, yenile (F5), köşe modu (Windows) ve tema düğmesi;
 ///    "Yeni görev" yan menüde.
 ///  - Mobil/tablet: logolu üst çubuk, kategori çekmecesi, arama, filtre çipleri ve yuvarlak FAB.
 class TasksPage extends ConsumerStatefulWidget {
@@ -57,6 +58,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyN, control: true): _newTask,
         const SingleActivator(LogicalKeyboardKey.keyF, control: true): _searchFocus.requestFocus,
+        const SingleActivator(LogicalKeyboardKey.f5): () => refreshAllWithFeedback(context, ref),
       },
       child: Focus(
         autofocus: true,
@@ -74,7 +76,12 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                     ),
                   ),
                   title: AppTitleBlock(title: title, overline: breadcrumb ?? 'YouRManG', showLogo: isCompact),
-                  actions: const [CornerModeButton(), _AccountButton(), SizedBox(width: 12)],
+                  actions: [
+                    if (!isCompact) const SyncButton(), // mobilde aşağı çekip yenileme
+                    const CornerModeButton(),
+                    const _AccountButton(),
+                    const SizedBox(width: 12),
+                  ],
                 ),
           drawer: isExpanded
               ? null
@@ -213,6 +220,7 @@ class _DesktopHeader extends StatelessWidget {
             child: TaskSearchField(focusNode: searchFocus, shortcutHint: 'Ctrl F'),
           ),
           const SizedBox(width: 8),
+          const SyncButton(),
           const CornerModeButton(),
           const _ThemeToggle(),
         ],

@@ -7,6 +7,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_surfaces.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/brand.dart';
+import '../../../tasks/presentation/widgets/sync_widgets.dart';
 import '../../domain/entities/category_tree.dart';
 import '../providers/category_providers.dart';
 import '../widgets/category_colors.dart';
@@ -14,15 +15,18 @@ import '../widgets/category_form_dialog.dart';
 import '../widgets/category_tree_panel.dart';
 
 /// Mobil/tablet "Kategoriler" sekmesi: hiyerarşi özeti + ağaç. Ağaçtan seçim yapınca görevler sekmesine geçer.
-class CategoriesPage extends StatelessWidget {
+/// Aşağı çekince (veya geniş ekranda yenile düğmesiyle) kategoriler ve görevler birlikte yenilenir.
+class CategoriesPage extends ConsumerWidget {
   const CategoriesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isCompact = context.windowSize == WindowSize.compact;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
-        title: AppTitleBlock(title: 'Kategoriler', showLogo: context.windowSize == WindowSize.compact),
+        title: AppTitleBlock(title: 'Kategoriler', showLogo: isCompact),
+        actions: [if (!isCompact) const SyncButton(), const SizedBox(width: 8)],
       ),
       floatingActionButton: AppFab(
         key: const Key('categories.fab'),
@@ -35,10 +39,13 @@ class CategoriesPage extends StatelessWidget {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: CategoryTreePanel(
-              highlightSelection: false,
-              header: const _HierarchyOverview(),
-              onScopeSelected: (_) => context.go(AppRoutes.tasks),
+            child: RefreshIndicator(
+              onRefresh: () => refreshAllWithFeedback(context, ref),
+              child: CategoryTreePanel(
+                highlightSelection: false,
+                header: const _HierarchyOverview(),
+                onScopeSelected: (_) => context.go(AppRoutes.tasks),
+              ),
             ),
           ),
         ),

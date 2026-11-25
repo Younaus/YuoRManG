@@ -7,6 +7,7 @@ import '../../../categories/presentation/providers/category_providers.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_status.dart';
 import '../providers/task_providers.dart';
+import 'sync_widgets.dart';
 import 'task_card.dart';
 import 'task_form.dart';
 
@@ -91,7 +92,6 @@ class _TaskListViewState extends ConsumerState<TaskListView> {
   @override
   Widget build(BuildContext context) {
     final listState = ref.watch(taskListProvider);
-    final tasks = listState.whenData((s) => s.items);
     final filter = ref.watch(taskFilterProvider);
     final tree = ref.watch(categoryTreeProvider).value;
 
@@ -101,8 +101,11 @@ class _TaskListViewState extends ConsumerState<TaskListView> {
       children: [
         SizedBox(height: 2, child: isReloading ? const LinearProgressIndicator() : null),
         Expanded(
-          child: tasks.when(
+          // `whenData` hata durumunda önceki veriyi taşımaz; skipError için doğrudan listState kullanılır.
+          child: listState.when(
             skipLoadingOnReload: true,
+            // Arka plandaki bir yenileme başarısız olursa mevcut liste ekranda kalır.
+            skipError: true,
             loading: () => _Skeleton(padding: widget.padding),
             error: (e, _) => EmptyState(
               icon: Icons.cloud_off_outlined,
@@ -113,14 +116,28 @@ class _TaskListViewState extends ConsumerState<TaskListView> {
                 child: const Text('Tekrar dene'),
               ),
             ),
-            data: (items) {
+            data: (data) {
+              final items = data.items;
               if (items.isEmpty) {
-                return _EmptyTasks(filter: filter, onCreateTask: widget.onCreateTask);
+                // Boş listede de aşağı çekip yenilenebilsin (ör. diğer cihazda eklenen görevler).
+                return RefreshIndicator(
+                  onRefresh: () => refreshAllWithFeedback(context, ref),
+                  child: LayoutBuilder(
+                    builder: (context, c) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: c.maxHeight),
+                        child: _EmptyTasks(filter: filter, onCreateTask: widget.onCreateTask),
+                      ),
+                    ),
+                  ),
+                );
               }
               final state = listState.value;
               final offset = widget.header == null ? 0 : 1;
               return RefreshIndicator(
-                onRefresh: _controller.refresh,
+                // Görevler ve kategoriler birlikte yenilenir.
+                onRefresh: () => refreshAllWithFeedback(context, ref),
                 child: ListView.separated(
                   controller: _scroll,
                   physics: const AlwaysScrollableScrollPhysics(),

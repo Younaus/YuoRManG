@@ -81,6 +81,8 @@ class _CategoryTreePanelState extends ConsumerState<CategoryTreePanel> {
     final showRootDrop = widget.enableDragAndDrop && _dragging?.parentId != null && tree != null;
 
     return ListView(
+      // Kısa listede de aşağı çekip yenileme (RefreshIndicator) çalışsın.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
       children: [
         if (widget.header != null) ...[widget.header!, const SizedBox(height: 16)],
@@ -116,6 +118,8 @@ class _CategoryTreePanelState extends ConsumerState<CategoryTreePanel> {
           _RootDropZone(onAccept: (dragged) => moveCategory(context, ref, dragged, null)),
         ...treeAsync.when(
           skipLoadingOnReload: true,
+          // Arka plandaki bir yenileme başarısız olursa mevcut ağaç ekranda kalır.
+          skipError: true,
           data: (tree) => tree.isEmpty
               ? [const _Hint('Henüz kategori yok. Görevlerinizi gruplamak için + ile ekleyin.')]
               : buildNodes(tree.roots, 0),

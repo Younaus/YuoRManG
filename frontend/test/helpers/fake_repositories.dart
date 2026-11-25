@@ -15,6 +15,9 @@ class FakeCategoryRepository implements CategoryRepository {
   final List<Category> _flat;
   int _seq = 0;
 
+  /// `getTree` çağrı sayısı (yenileme testleri için).
+  int treeRequests = 0;
+
   CategoryTree get tree {
     List<Category> childrenOf(String? parentId) => _flat
         .where((c) => c.parentId == parentId)
@@ -24,7 +27,10 @@ class FakeCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<CategoryTree> getTree() async => tree;
+  Future<CategoryTree> getTree() async {
+    treeRequests++;
+    return tree;
+  }
 
   @override
   Future<Category> create({required String name, String? parentId, String? color}) async {
