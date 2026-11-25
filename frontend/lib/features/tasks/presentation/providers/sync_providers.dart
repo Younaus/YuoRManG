@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
+import 'calendar_providers.dart';
 import 'corner_mode_providers.dart';
 import 'offline_sync_providers.dart';
 import 'task_providers.dart';
@@ -68,6 +69,7 @@ class SyncController extends Notifier<SyncState> {
         } catch (_) {}
         ref.invalidate(categoryTreeProvider);
         ref.invalidate(activeTasksProvider);
+        ref.invalidate(calendarTasksProvider);
         final results = await Future.wait([
           ok(ref.read(categoryTreeProvider.future)),
           ok(ref.read(taskListProvider.notifier).refresh()),

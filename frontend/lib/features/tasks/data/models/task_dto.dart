@@ -84,6 +84,8 @@ Map<String, dynamic> taskQueryToParams(TaskQuery q) => {
           },
       },
       'q': ?_nonBlank(q.search),
+      'dueFrom': ?q.dueFrom?.toUtc().toIso8601String(),
+      'dueTo': ?q.dueTo?.toUtc().toIso8601String(),
       'sort': q.sort.apiValue,
       'limit': q.limit,
       'cursor': ?q.cursor,

@@ -26,6 +26,11 @@ void main() {
     'arama (Türkçe, çok kelime)': const TaskQuery(search: 'BUTCE PLAN'),
     'arama (kelime öneki)': const TaskQuery(search: 'sirk'),
     'arama (kelime ortası eşleşmez)': const TaskQuery(search: 'lamasi'),
+    'tarih aralığı (takvim; uçlar dahil, tarihsizler hariç)': TaskQuery(
+      dueFrom: DateTime(2026, 11, 30),
+      dueTo: DateTime(2026, 12, 3),
+    ),
+    'tarih aralığı + durum': TaskQuery(status: TaskStatus.inProgress, dueFrom: DateTime(2026, 11, 1)),
   };
 
   for (final MapEntry(key: name, value: query) in queries.entries) {

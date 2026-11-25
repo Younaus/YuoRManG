@@ -21,6 +21,12 @@ const appDestinations = <AppDestination>[
     selectedIcon: Icons.check_circle,
   ),
   AppDestination(
+    path: AppRoutes.calendar,
+    label: 'Takvim',
+    icon: Icons.calendar_month_outlined,
+    selectedIcon: Icons.calendar_month,
+  ),
+  AppDestination(
     path: AppRoutes.categories,
     label: 'Kategoriler',
     icon: Icons.folder_outlined,

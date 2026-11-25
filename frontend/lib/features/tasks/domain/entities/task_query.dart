@@ -23,6 +23,10 @@ abstract class TaskQuery with _$TaskQuery {
     @Default(false) bool includeSubcategories,
     /// Başlıkta kelime öneki araması (sunucuda; büyük/küçük harf ve Türkçe karakter duyarsız).
     String? search,
+    /// Bitiş tarihi aralığı (iki uç dahil). Verilirse tarihsiz görevler hariç kalır ve
+    /// sonuçlar bitiş tarihine göre (yakından uzağa) sıralanır — takvim görünümü.
+    DateTime? dueFrom,
+    DateTime? dueTo,
     @Default(50) int limit,
     String? cursor,
   }) = _TaskQuery;

@@ -22,8 +22,9 @@ Future<bool?> showNewTaskForm(BuildContext context, WidgetRef ref) {
 
 /// Görev oluşturma/düzenleme: mobilde tam yükseklikte alt sayfa, geniş ekranda diyalog.
 /// Kaydedilirse `true` döner.
-Future<bool?> showTaskForm(BuildContext context, {Task? task, String? defaultCategoryId}) {
-  final form = TaskForm(task: task, defaultCategoryId: defaultCategoryId);
+/// [defaultDueDate]: yeni görevde önceden doldurulan bitiş tarihi (ör. takvimde seçili gün).
+Future<bool?> showTaskForm(BuildContext context, {Task? task, String? defaultCategoryId, DateTime? defaultDueDate}) {
+  final form = TaskForm(task: task, defaultCategoryId: defaultCategoryId, defaultDueDate: defaultDueDate);
   if (context.windowSize == WindowSize.compact) {
     return showModalBottomSheet<bool>(
       context: context,
@@ -45,10 +46,11 @@ Future<bool?> showTaskForm(BuildContext context, {Task? task, String? defaultCat
 }
 
 class TaskForm extends ConsumerStatefulWidget {
-  const TaskForm({this.task, this.defaultCategoryId, super.key});
+  const TaskForm({this.task, this.defaultCategoryId, this.defaultDueDate, super.key});
 
   final Task? task;
   final String? defaultCategoryId;
+  final DateTime? defaultDueDate;
 
   @override
   ConsumerState<TaskForm> createState() => _TaskFormState();
@@ -58,7 +60,7 @@ class _TaskFormState extends ConsumerState<TaskForm> {
   final _formKey = GlobalKey<FormState>();
   late final _title = TextEditingController(text: widget.task?.title);
   late final _description = TextEditingController(text: widget.task?.description);
-  late DateTime? _dueDate = widget.task?.dueDate;
+  late DateTime? _dueDate = widget.task != null ? widget.task!.dueDate : widget.defaultDueDate;
   late String? _categoryId = widget.task != null ? widget.task!.categoryId : widget.defaultCategoryId;
 
   /// Yalnızca düzenlemede seçilebilir; yeni görevler [TaskDraft.initialStatus] ("Devam ediyor") ile başlar.

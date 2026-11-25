@@ -5,6 +5,7 @@ abstract final class AppRoutes {
 
   // Ana kabuk (shell) içindeki sekmeler
   static const tasks = '/tasks';
+  static const calendar = '/calendar';
   static const categories = '/categories';
   static const settings = '/settings';
 

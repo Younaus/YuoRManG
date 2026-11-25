@@ -6,6 +6,7 @@ import '../../features/auth/domain/entities/app_user.dart';
 import '../../features/auth/presentation/pages/sign_in_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/categories/presentation/pages/categories_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/tasks/presentation/pages/tasks_page.dart';
@@ -76,6 +77,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(
             routes: [GoRoute(path: AppRoutes.tasks, builder: (_, _) => const TasksPage())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: AppRoutes.calendar, builder: (_, _) => const CalendarPage())],
           ),
           StatefulShellBranch(
             routes: [GoRoute(path: AppRoutes.categories, builder: (_, _) => const CategoriesPage())],

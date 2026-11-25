@@ -129,6 +129,16 @@ class FakeTaskRepository implements TaskRepository {
     if (query.status != null) result = result.where((t) => t.status == query.status);
     final search = query.search;
     if (search != null && search.trim().isNotEmpty) result = result.where((t) => titleMatchesSearch(t.title, search));
+    // Backend: dueFrom/dueTo iki uç dahil; tarihsizler hariç.
+    final (from, to) = (query.dueFrom, query.dueTo);
+    if (from != null || to != null) {
+      result = result.where(
+        (t) =>
+            t.dueDate != null &&
+            (from == null || !t.dueDate!.isBefore(from)) &&
+            (to == null || !t.dueDate!.isAfter(to)),
+      );
+    }
     result = switch (query.scope) {
       AllTasksScope() => result,
       UncategorizedScope() => result.where((t) => t.categoryId == null),
@@ -141,7 +151,7 @@ class FakeTaskRepository implements TaskRepository {
     };
     final sorted = result.toList()
       ..sort(
-        (a, b) => query.sort == TaskSort.dueDate
+        (a, b) => sortsByDueDate(query)
             ? (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0))
             : b.createdAt.compareTo(a.createdAt),
       );

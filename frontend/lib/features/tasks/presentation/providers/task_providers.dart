@@ -16,6 +16,7 @@ import '../../domain/entities/task_draft.dart';
 import '../../domain/entities/task_query.dart';
 import '../../domain/entities/task_status.dart';
 import '../../domain/repositories/task_repository.dart';
+import 'calendar_providers.dart';
 import 'offline_sync_providers.dart';
 
 part 'task_providers.freezed.dart';
@@ -164,6 +165,7 @@ class TaskListController extends AsyncNotifier<TaskListState> {
   Future<Task> create(TaskDraft draft) async {
     final task = await _repo.create(draft);
     ref.invalidate(activeTasksProvider);
+    ref.invalidate(calendarTasksProvider);
     if (ref.mounted) await refresh();
     return task;
   }
@@ -171,6 +173,7 @@ class TaskListController extends AsyncNotifier<TaskListState> {
   Future<Task> edit(Task task, TaskDraft draft) async {
     final updated = await _repo.update(task.id, draft);
     ref.invalidate(activeTasksProvider);
+    ref.invalidate(calendarTasksProvider);
     if (ref.mounted) await refresh();
     return updated;
   }
@@ -187,6 +190,7 @@ class TaskListController extends AsyncNotifier<TaskListState> {
     try {
       final saved = await _repo.setStatus(task.id, status);
       ref.invalidate(activeTasksProvider);
+      ref.invalidate(calendarTasksProvider);
       if (!ref.mounted) return;
       final items = state.value?.items ?? const <Task>[];
       _setItems(items.map((t) => t.id == saved.id ? saved : t));
@@ -214,6 +218,7 @@ class TaskListController extends AsyncNotifier<TaskListState> {
   Future<void> deleteRemote(Task task) async {
     await _repo.delete(task.id);
     ref.invalidate(activeTasksProvider);
+    ref.invalidate(calendarTasksProvider);
   }
 
   /// Başka bir yerde (ör. köşe modu) sunucuda güncellenen görevi listeye yansıtır.
@@ -260,6 +265,7 @@ class ActiveTasksController extends AsyncNotifier<List<Task>> {
     try {
       final saved = await ref.read(taskRepositoryProvider).setStatus(task.id, TaskStatus.done);
       if (ref.exists(taskListProvider)) ref.read(taskListProvider.notifier).syncLocal(saved);
+      ref.invalidate(calendarTasksProvider);
       return saved;
     } catch (_) {
       if (ref.mounted) state = AsyncData(before);

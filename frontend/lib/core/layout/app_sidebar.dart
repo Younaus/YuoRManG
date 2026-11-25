@@ -18,8 +18,10 @@ class AppSidebar extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  // core/router/app_destinations.dart sırası.
   static const _tasksBranch = 0;
-  static const _settingsBranch = 2;
+  static const _calendarBranch = 1;
+  static const _settingsBranch = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,6 +31,7 @@ class AppSidebar extends ConsumerWidget {
     final user = ref.watch(authStateProvider).value;
     final onTasks = navigationShell.currentIndex == _tasksBranch;
     final onSettings = navigationShell.currentIndex == _settingsBranch;
+    final onCalendar = navigationShell.currentIndex == _calendarBranch;
 
     void newTask() {
       if (!onTasks) navigationShell.goBranch(_tasksBranch);
@@ -81,6 +84,18 @@ class AppSidebar extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _SidebarNavItem(
+                key: const Key('sidebar.calendar'),
+                icon: Icons.calendar_month_outlined,
+                selectedIcon: Icons.calendar_month,
+                label: 'Takvim',
+                selected: onCalendar,
+                onTap: () => navigationShell.goBranch(_calendarBranch),
+              ),
+            ),
+            const SizedBox(height: 4),
             Expanded(
               child: CategoryTreePanel(
                 highlightSelection: onTasks,
@@ -97,6 +112,52 @@ class AppSidebar extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Yan menüde tek satırlık gezinme öğesi (seçiliyken kategori satırları gibi dolu indigo).
+class _SidebarNavItem extends StatelessWidget {
+  const _SidebarNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fg = selected ? scheme.onPrimary : scheme.onSurface;
+    return Material(
+      color: selected ? scheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        onTap: onTap,
+        child: SizedBox(
+          height: 42,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Icon(selected ? selectedIcon : icon, size: 20, color: selected ? fg : scheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Text(label, style: theme.textTheme.labelLarge?.copyWith(color: fg, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
         ),
       ),
     );

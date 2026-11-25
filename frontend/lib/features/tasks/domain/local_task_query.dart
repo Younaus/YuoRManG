@@ -9,6 +9,12 @@ import 'entities/task_status.dart';
 /// Görev [query]'nin kapsam / durum / arama filtresine uyuyor mu (sayfalama hariç).
 bool taskMatchesQuery(Task task, TaskQuery query, {CategoryTree? tree}) {
   if (query.status != null && task.status != query.status) return false;
+  if (query.dueFrom != null || query.dueTo != null) {
+    final due = task.dueDate;
+    if (due == null) return false;
+    if (query.dueFrom != null && due.isBefore(query.dueFrom!)) return false;
+    if (query.dueTo != null && due.isAfter(query.dueTo!)) return false;
+  }
   final search = query.search?.trim();
   if (search != null && search.isNotEmpty && !titleMatchesSearch(task.title, search)) return false;
   return switch (query.scope) {
@@ -21,16 +27,20 @@ bool taskMatchesQuery(Task task, TaskQuery query, {CategoryTree? tree}) {
   };
 }
 
-/// Filtreler ve backend ile aynı sırada döner: en yeni önce, ya da bitiş tarihine göre (tarihsizler önce).
+/// Backend ile aynı sırada döner: en yeni önce, ya da bitiş tarihine göre (tarihsizler önce).
+/// Tarih aralığı verilmişse her zaman bitiş tarihine göre.
 List<Task> applyLocalQuery(Iterable<Task> tasks, TaskQuery query, {CategoryTree? tree}) {
   final result = tasks.where((t) => taskMatchesQuery(t, query, tree: tree)).toList();
   result.sort(
-    (a, b) => query.sort == TaskSort.dueDate
+    (a, b) => sortsByDueDate(query)
         ? (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0))
         : b.createdAt.compareTo(a.createdAt),
   );
   return result;
 }
+
+/// Backend: `sort=dueDate` ya da tarih aralığı verilmişse bitiş tarihine göre sıralanır.
+bool sortsByDueDate(TaskQuery query) => query.sort == TaskSort.dueDate || query.dueFrom != null || query.dueTo != null;
 
 // --- Başlık araması: kelime öneki; Türkçe büyük/küçük harf ve karakter duyarsız ------------------
 
