@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
 import 'corner_mode_providers.dart';
+import 'offline_sync_providers.dart';
 import 'task_providers.dart';
 
 /// Yenileme durumu (masaüstü yenile düğmesindeki gösterge için).
@@ -57,13 +58,16 @@ class SyncController extends Notifier<SyncState> {
   Future<bool> _run() {
     if (ref.read(currentUidProvider) == null) return Future.value(true);
     state = SyncState(refreshing: true, lastRefreshAt: _now());
-
-    ref.invalidate(categoryTreeProvider);
-    ref.invalidate(activeTasksProvider);
     Future<bool> ok(Future<Object?> f) => f.then((_) => true, onError: (Object _) => false);
 
     final run = () async {
       try {
+        // Önce çevrimdışı yapılan değişiklikleri sırayla gönder, sonra güncel listeyi çek.
+        try {
+          await ref.read(offlineSyncProvider.notifier).flush();
+        } catch (_) {}
+        ref.invalidate(categoryTreeProvider);
+        ref.invalidate(activeTasksProvider);
         final results = await Future.wait([
           ok(ref.read(categoryTreeProvider.future)),
           ok(ref.read(taskListProvider.notifier).refresh()),

@@ -2,24 +2,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../core/network/dio_provider.dart';
+import '../../../../core/offline/connectivity_service.dart';
+import '../../../../core/offline/offline_store.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../categories/data/offline/category_offline_cache.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
 import '../../data/datasources/task_remote_data_source.dart';
+import '../../data/offline/task_offline_cache.dart';
+import '../../data/repositories/offline_task_repository.dart';
 import '../../data/repositories/task_repository_impl.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_draft.dart';
 import '../../domain/entities/task_query.dart';
 import '../../domain/entities/task_status.dart';
 import '../../domain/repositories/task_repository.dart';
+import 'offline_sync_providers.dart';
 
 part 'task_providers.freezed.dart';
 
 /// Backend'in `includeSubcategories` için kabul ettiği en büyük alt ağaç (Firestore `in` limiti).
 const maxSubtreeForInclude = 30;
 
-final taskRepositoryProvider = Provider<TaskRepository>(
+/// Doğrudan canlı API (çevrimdışı kuyruk gönderimi de bunu kullanır).
+final taskRemoteRepositoryProvider = Provider<TaskRepository>(
   (ref) => TaskRepositoryImpl(TaskRemoteDataSource(ref.watch(dioProvider))),
 );
+
+/// Uygulamanın kullandığı depo: oturum açıkken çevrimdışı önbellek + işlem kuyruğu ile sarılı.
+final taskRepositoryProvider = Provider<TaskRepository>((ref) {
+  final remote = ref.watch(taskRemoteRepositoryProvider);
+  final uid = ref.watch(currentUidProvider);
+  if (uid == null) return remote;
+  final store = ref.watch(offlineStoreProvider);
+  return OfflineTaskRepository(
+    remote: remote,
+    cache: TaskOfflineCache(store, uid),
+    categories: CategoryOfflineCache(store, uid),
+    connectivity: ref.watch(connectivityServiceProvider),
+    status: ref.read(offlineSyncProvider.notifier),
+  );
+});
 
 // ---------------------------------------------------------------------------
 // Seçim ve filtreler

@@ -14,9 +14,9 @@ class ApiException implements Exception {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return const ApiException(code: 'TIMEOUT', message: 'Sunucu yanıt vermedi. Lütfen tekrar deneyin.');
+        return const ApiException(code: timeoutCode, message: 'Sunucu yanıt vermedi. Lütfen tekrar deneyin.');
       case DioExceptionType.connectionError:
-        return const ApiException(code: 'NETWORK_ERROR', message: 'Sunucuya bağlanılamadı. Bağlantınızı kontrol edin.');
+        return const ApiException(code: networkErrorCode, message: 'Sunucuya bağlanılamadı. Bağlantınızı kontrol edin.');
       case DioExceptionType.cancel:
         return const ApiException(code: 'CANCELLED', message: 'İstek iptal edildi.');
       default:
@@ -45,6 +45,12 @@ class ApiException implements Exception {
   bool get isUnauthorized => statusCode == 401;
   bool get isNotFound => statusCode == 404;
   bool get isValidation => code == 'VALIDATION_ERROR';
+
+  /// Sunucuya hiç ulaşılamadı (bağlantı yok / zaman aşımı) — çevrimdışı moda geçmek için.
+  bool get isNetworkError => code == networkErrorCode || code == timeoutCode;
+
+  static const networkErrorCode = 'NETWORK_ERROR';
+  static const timeoutCode = 'TIMEOUT';
 
   @override
   String toString() => 'ApiException($statusCode $code: $message)';

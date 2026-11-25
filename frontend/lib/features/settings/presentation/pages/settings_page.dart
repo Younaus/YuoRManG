@@ -8,6 +8,7 @@ import '../../../../core/theme/theme_mode_controller.dart';
 import '../../../../core/widgets/brand.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../tasks/presentation/providers/corner_mode_providers.dart';
+import '../../../tasks/presentation/providers/offline_sync_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -39,7 +40,7 @@ class SettingsPage extends ConsumerWidget {
                       title: Text(user?.label ?? '-'),
                       subtitle: Text(user?.email ?? ''),
                       trailing: OutlinedButton.icon(
-                        onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                        onPressed: () => _signOut(context, ref),
                         icon: const Icon(Icons.logout, size: 18),
                         label: const Text('Çıkış yap'),
                       ),
@@ -115,6 +116,32 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Çıkışta bu cihazdaki önbellek ve gönderilmemiş değişiklikler silinir; bekleyen varsa önce sorulur.
+Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+  final pending = ref.read(offlineSyncProvider).pending;
+  if (pending > 0) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Gönderilmemiş değişiklikler var'),
+        content: Text(
+          '$pending değişiklik henüz sunucuya gönderilmedi. Çıkış yaparsanız bu cihazdan silinecek.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Vazgeç')),
+          FilledButton(
+            key: const Key('settings.signOutConfirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Yine de çıkış yap'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+  }
+  await ref.read(authRepositoryProvider).signOut();
 }
 
 class _Section extends StatelessWidget {

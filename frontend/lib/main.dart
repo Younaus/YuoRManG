@@ -10,6 +10,7 @@ import 'core/desktop/global_hotkey_service.dart';
 import 'core/desktop/tray_service.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/network/retry_policy.dart';
+import 'core/offline/connectivity_service.dart';
 import 'core/storage/shared_preferences_provider.dart';
 
 Future<void> main() async {
@@ -35,6 +36,8 @@ Future<void> main() async {
         cornerWindowServiceProvider.overrideWithValue(cornerWindow),
         desktopTrayServiceProvider.overrideWithValue(tray),
         globalHotkeyServiceProvider.overrideWithValue(hotkey),
+        // Bağlantı geri gelince çevrimdışı kuyruk gönderilir (Android, Windows, Web).
+        connectivityServiceProvider.overrideWithValue(PlusConnectivityService()),
       ],
       child: const YouRManGApp(),
     ),

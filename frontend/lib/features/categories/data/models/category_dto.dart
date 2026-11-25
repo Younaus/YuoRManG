@@ -37,3 +37,14 @@ class CategoryDto {
         children: children.map((c) => c.toEntity()).toList(growable: false),
       );
 }
+
+/// Kategori düğümünü (alt dallarıyla) API yanıtı biçiminde JSON'a çevirir — çevrimdışı önbellek.
+Map<String, dynamic> categoryToJson(Category c) => {
+      'id': c.id,
+      'name': c.name,
+      'parentId': c.parentId,
+      'color': c.color,
+      'icon': c.icon,
+      'order': c.order,
+      'children': c.children.map(categoryToJson).toList(),
+    };

@@ -1,16 +1,35 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/dio_provider.dart';
+import '../../../../core/offline/connectivity_service.dart';
+import '../../../../core/offline/offline_store.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../tasks/presentation/providers/offline_sync_providers.dart';
 import '../../data/datasources/category_remote_data_source.dart';
+import '../../data/offline/category_offline_cache.dart';
 import '../../data/repositories/category_repository_impl.dart';
+import '../../data/repositories/offline_category_repository.dart';
 import '../../domain/entities/category.dart';
 import '../../domain/entities/category_tree.dart';
 import '../../domain/repositories/category_repository.dart';
 
-final categoryRepositoryProvider = Provider<CategoryRepository>(
+/// Doğrudan canlı API.
+final categoryRemoteRepositoryProvider = Provider<CategoryRepository>(
   (ref) => CategoryRepositoryImpl(CategoryRemoteDataSource(ref.watch(dioProvider))),
 );
+
+/// Uygulamanın kullandığı depo: oturum açıkken ağaç çevrimdışı için önbelleklenir.
+final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
+  final remote = ref.watch(categoryRemoteRepositoryProvider);
+  final uid = ref.watch(currentUidProvider);
+  if (uid == null) return remote;
+  return OfflineCategoryRepository(
+    remote: remote,
+    cache: CategoryOfflineCache(ref.watch(offlineStoreProvider), uid),
+    connectivity: ref.watch(connectivityServiceProvider),
+    status: ref.read(offlineSyncProvider.notifier),
+  );
+});
 
 class CategoryTreeController extends AsyncNotifier<CategoryTree> {
   @override

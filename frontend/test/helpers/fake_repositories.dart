@@ -6,6 +6,7 @@ import 'package:yourmang/features/tasks/domain/entities/task.dart';
 import 'package:yourmang/features/tasks/domain/entities/task_draft.dart';
 import 'package:yourmang/features/tasks/domain/entities/task_query.dart';
 import 'package:yourmang/features/tasks/domain/entities/task_status.dart';
+import 'package:yourmang/features/tasks/domain/local_task_query.dart';
 import 'package:yourmang/features/tasks/domain/repositories/task_repository.dart';
 
 /// Bellek içi kategori deposu (düz liste → ağaç).
@@ -18,22 +19,29 @@ class FakeCategoryRepository implements CategoryRepository {
   /// `getTree` çağrı sayısı (yenileme testleri için).
   int treeRequests = 0;
 
+  /// `true` iken her istek ağ hatası verir (sunucuya ulaşılamıyor).
+  bool offline = false;
+
+  void _checkNetwork() {
+    if (offline) throw _networkError;
+  }
+
   CategoryTree get tree {
-    List<Category> childrenOf(String? parentId) => _flat
-        .where((c) => c.parentId == parentId)
-        .map((c) => c.copyWith(children: childrenOf(c.id)))
-        .toList();
+    List<Category> childrenOf(String? parentId) =>
+        _flat.where((c) => c.parentId == parentId).map((c) => c.copyWith(children: childrenOf(c.id))).toList();
     return CategoryTree(childrenOf(null));
   }
 
   @override
   Future<CategoryTree> getTree() async {
+    _checkNetwork();
     treeRequests++;
     return tree;
   }
 
   @override
   Future<Category> create({required String name, String? parentId, String? color}) async {
+    _checkNetwork();
     if (_flat.any((c) => c.parentId == parentId && c.name.toLowerCase() == name.toLowerCase())) {
       throw const ApiException(statusCode: 409, code: 'CONFLICT', message: 'duplicate');
     }
@@ -45,6 +53,7 @@ class FakeCategoryRepository implements CategoryRepository {
   /// Backend gibi: döngü → 400, aynı seviyede aynı ad → 409, taşınınca yeni seviyenin sonuna eklenir.
   @override
   Future<Category> update(String id, {String? name, String? color, ParentChange? parent}) async {
+    _checkNetwork();
     final i = _flat.indexWhere((c) => c.id == id);
     final current = _flat[i];
     final newParent = parent != null ? parent.parentId : current.parentId;
@@ -65,6 +74,7 @@ class FakeCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> delete(String id, {CategoryDeleteStrategy strategy = CategoryDeleteStrategy.cascade}) async {
+    _checkNetwork();
     final ids = tree.subtreeIds(id);
     if (strategy == CategoryDeleteStrategy.cascade) {
       _flat.removeWhere((c) => ids.contains(c.id));
@@ -90,7 +100,20 @@ class FakeTaskRepository implements TaskRepository {
   /// Bir sonraki çağrıda fırlatılacak hata (tek seferlik).
   Object? failNext;
 
+  /// `true` iken her istek ağ hatası verir (sunucuya ulaşılamıyor).
+  bool offline = false;
+
+  /// Sunucuya ulaşan yazma istekleri (sıra kontrolü için): `create:BAŞLIK`, `status:ID:DURUM`, `delete:ID`.
+  final List<String> writes = [];
+
+  int _indexOf(String id) {
+    final i = tasks.indexWhere((t) => t.id == id);
+    if (i < 0) throw const ApiException(statusCode: 404, code: 'NOT_FOUND', message: 'Görev bulunamadı');
+    return i;
+  }
+
   void _maybeFail() {
+    if (offline) throw _networkError;
     final e = failNext;
     if (e != null) {
       failNext = null;
@@ -105,21 +128,23 @@ class FakeTaskRepository implements TaskRepository {
     Iterable<Task> result = tasks;
     if (query.status != null) result = result.where((t) => t.status == query.status);
     final search = query.search;
-    if (search != null && search.trim().isNotEmpty) result = result.where((t) => _titleMatches(t.title, search));
+    if (search != null && search.trim().isNotEmpty) result = result.where((t) => titleMatchesSearch(t.title, search));
     result = switch (query.scope) {
       AllTasksScope() => result,
       UncategorizedScope() => result.where((t) => t.categoryId == null),
       CategoryScope(:final categoryId) => () {
-          final ids = query.includeSubcategories
-              ? (categories?.tree.subtreeIds(categoryId) ?? [categoryId])
-              : [categoryId];
-          return result.where((t) => ids.contains(t.categoryId));
-        }(),
+        final ids = query.includeSubcategories
+            ? (categories?.tree.subtreeIds(categoryId) ?? [categoryId])
+            : [categoryId];
+        return result.where((t) => ids.contains(t.categoryId));
+      }(),
     };
     final sorted = result.toList()
-      ..sort((a, b) => query.sort == TaskSort.dueDate
-          ? (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0))
-          : b.createdAt.compareTo(a.createdAt));
+      ..sort(
+        (a, b) => query.sort == TaskSort.dueDate
+            ? (a.dueDate ?? DateTime(0)).compareTo(b.dueDate ?? DateTime(0))
+            : b.createdAt.compareTo(a.createdAt),
+      );
     final start = query.cursor == null ? 0 : sorted.indexWhere((t) => t.id == query.cursor) + 1;
     final page = sorted.skip(start).take(query.limit).toList();
     final hasMore = start + page.length < sorted.length;
@@ -129,6 +154,7 @@ class FakeTaskRepository implements TaskRepository {
   @override
   Future<Task> create(TaskDraft d) async {
     _maybeFail();
+    writes.add('create:${d.title}');
     final now = DateTime.now();
     final t = Task(
       id: 'new-${++_seq}',
@@ -147,7 +173,7 @@ class FakeTaskRepository implements TaskRepository {
   @override
   Future<Task> update(String id, TaskDraft d) async {
     _maybeFail();
-    final i = tasks.indexWhere((t) => t.id == id);
+    final i = _indexOf(id);
     return tasks[i] = tasks[i].copyWith(
       title: d.title,
       description: d.description,
@@ -160,38 +186,26 @@ class FakeTaskRepository implements TaskRepository {
   @override
   Future<Task> setStatus(String id, TaskStatus status) async {
     _maybeFail();
-    final i = tasks.indexWhere((t) => t.id == id);
+    final i = _indexOf(id);
+    writes.add('status:$id:${status.apiValue}');
     return tasks[i] = tasks[i].copyWith(status: status, completedAt: status == TaskStatus.done ? DateTime.now() : null);
   }
 
   @override
   Future<void> delete(String id) async {
     _maybeFail();
+    _indexOf(id);
+    writes.add('delete:$id');
     tasks.removeWhere((t) => t.id == id);
   }
 }
 
-// --- Backend araması (utils/search.ts) ile aynı kurallar ------------------------
-// Kelime öneki, yalnızca başlıkta; Türkçe büyük/küçük harf ve karakter duyarsız.
+const _networkError = ApiException(
+  code: ApiException.networkErrorCode,
+  message: 'Sunucuya bağlanılamadı. Bağlantınızı kontrol edin.',
+);
 
-const _fold = {'ı': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c'};
-
-String _normalize(String s) => s
-    .replaceAll('I', 'ı')
-    .replaceAll('İ', 'i')
-    .toLowerCase()
-    .split('')
-    .map((ch) => _fold[ch] ?? ch)
-    .join();
-
-List<String> _words(String s) =>
-    _normalize(s).split(RegExp(r'[^\p{L}\p{N}]+', unicode: true)).where((w) => w.isNotEmpty).toList();
-
-bool _titleMatches(String title, String query) {
-  final queryWords = _words(query);
-  final titleWords = _words(title);
-  return queryWords.every((q) => titleWords.any((t) => t.startsWith(q)));
-}
+// Başlık araması: lib/features/tasks/domain/local_task_query.dart (backend ile aynı kurallar).
 
 // --- Örnek veri ---------------------------------------------------------------
 
@@ -221,15 +235,15 @@ Task task(
 
 /// İş > Projeler > Alpha, Kişisel
 List<Category> sampleCategories() => const [
-      Category(id: 'work', name: 'İş', color: '#4F46E5'),
-      Category(id: 'projects', name: 'Projeler', parentId: 'work', color: '#0EA5E9'),
-      Category(id: 'alpha', name: 'Alpha', parentId: 'projects', color: '#10B981'),
-      Category(id: 'personal', name: 'Kişisel', color: '#F43F5E', order: 1),
-    ];
+  Category(id: 'work', name: 'İş', color: '#4F46E5'),
+  Category(id: 'projects', name: 'Projeler', parentId: 'work', color: '#0EA5E9'),
+  Category(id: 'alpha', name: 'Alpha', parentId: 'projects', color: '#10B981'),
+  Category(id: 'personal', name: 'Kişisel', color: '#F43F5E', order: 1),
+];
 
 List<Task> sampleTasks() => [
-      task('t1', title: 'Sprint planlaması', description: 'Hedefleri belirle\nikinci satır', categoryId: 'work'),
-      task('t2', title: 'API dokümantasyonu', status: TaskStatus.inProgress, categoryId: 'alpha', ageMinutes: 1),
-      task('t3', title: 'Market alışverişi', status: TaskStatus.done, categoryId: 'personal', ageMinutes: 2),
-      task('t4', title: 'Kategorisiz not', ageMinutes: 3),
-    ];
+  task('t1', title: 'Sprint planlaması', description: 'Hedefleri belirle\nikinci satır', categoryId: 'work'),
+  task('t2', title: 'API dokümantasyonu', status: TaskStatus.inProgress, categoryId: 'alpha', ageMinutes: 1),
+  task('t3', title: 'Market alışverişi', status: TaskStatus.done, categoryId: 'personal', ageMinutes: 2),
+  task('t4', title: 'Kategorisiz not', ageMinutes: 3),
+];

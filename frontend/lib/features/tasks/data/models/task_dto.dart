@@ -88,3 +88,18 @@ Map<String, dynamic> taskQueryToParams(TaskQuery q) => {
       'limit': q.limit,
       'cursor': ?q.cursor,
     };
+
+/// Görevi API yanıtıyla aynı biçimde JSON'a çevirir (çevrimdışı önbellek; [TaskDto.fromJson] ile okunur).
+Map<String, dynamic> taskToJson(Task t) => {
+      'id': t.id,
+      'title': t.title,
+      'description': t.description,
+      'status': t.status.apiValue,
+      'categoryId': t.categoryId,
+      'dueDate': t.dueDate?.toUtc().toIso8601String(),
+      'completedAt': t.completedAt?.toUtc().toIso8601String(),
+      'createdAt': t.createdAt.toUtc().toIso8601String(),
+      'updatedAt': t.updatedAt.toUtc().toIso8601String(),
+    };
+
+Task taskFromJson(Map<String, dynamic> json) => TaskDto.fromJson(json).toEntity();

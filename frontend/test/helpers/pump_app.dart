@@ -23,6 +23,9 @@ extension PumpApp on WidgetTester {
     Map<String, Object> prefs = const {},
     Size size = const Size(800, 600),
     List<Override> overrides = const [],
+
+    /// `true`: sahte depolar canlı API yerine geçer ve uygulamanın çevrimdışı önbellek/kuyruk katmanı çalışır.
+    bool withOfflineLayer = false,
   }) async {
     await initializeDateFormatting('tr_TR');
     view.physicalSize = size * view.devicePixelRatio;
@@ -37,8 +40,13 @@ extension PumpApp on WidgetTester {
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sp),
           authRepositoryProvider.overrideWithValue(auth),
-          categoryRepositoryProvider.overrideWithValue(categoryRepo),
-          taskRepositoryProvider.overrideWithValue(tasks ?? FakeTaskRepository(categories: categoryRepo)),
+          if (withOfflineLayer) ...[
+            categoryRemoteRepositoryProvider.overrideWithValue(categoryRepo),
+            taskRemoteRepositoryProvider.overrideWithValue(tasks ?? FakeTaskRepository(categories: categoryRepo)),
+          ] else ...[
+            categoryRepositoryProvider.overrideWithValue(categoryRepo),
+            taskRepositoryProvider.overrideWithValue(tasks ?? FakeTaskRepository(categories: categoryRepo)),
+          ],
           ...overrides,
         ],
         child: const YouRManGApp(),
