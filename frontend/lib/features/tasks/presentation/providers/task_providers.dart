@@ -9,6 +9,7 @@ import '../../../categories/data/offline/category_offline_cache.dart';
 import '../../../categories/presentation/providers/category_providers.dart';
 import '../../data/datasources/task_remote_data_source.dart';
 import '../../data/offline/task_offline_cache.dart';
+import '../../data/repositories/observed_task_repository.dart';
 import '../../data/repositories/offline_task_repository.dart';
 import '../../data/repositories/task_repository_impl.dart';
 import '../../domain/entities/task.dart';
@@ -18,6 +19,7 @@ import '../../domain/entities/task_status.dart';
 import '../../domain/repositories/task_repository.dart';
 import 'calendar_providers.dart';
 import 'offline_sync_providers.dart';
+import 'reminder_providers.dart';
 
 part 'task_providers.freezed.dart';
 
@@ -35,12 +37,19 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   final uid = ref.watch(currentUidProvider);
   if (uid == null) return remote;
   final store = ref.watch(offlineStoreProvider);
-  return OfflineTaskRepository(
+  final offline = OfflineTaskRepository(
     remote: remote,
     cache: TaskOfflineCache(store, uid),
     categories: CategoryOfflineCache(store, uid),
     connectivity: ref.watch(connectivityServiceProvider),
     status: ref.read(offlineSyncProvider.notifier),
+  );
+  // Görev eklenince / tamamlanınca / silinince / tarihi değişince cihaz içi hatırlatmalar güncellenir.
+  return ObservedTaskRepository(
+    offline,
+    onWrite: () {
+      if (ref.mounted) ref.read(reminderProvider.notifier).requestSync();
+    },
   );
 });
 

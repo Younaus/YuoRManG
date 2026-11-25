@@ -6,6 +6,7 @@ import '../../../categories/presentation/providers/category_providers.dart';
 import 'calendar_providers.dart';
 import 'corner_mode_providers.dart';
 import 'offline_sync_providers.dart';
+import 'reminder_providers.dart';
 import 'task_providers.dart';
 
 /// Yenileme durumu (masaüstü yenile düğmesindeki gösterge için).
@@ -74,6 +75,8 @@ class SyncController extends Notifier<SyncState> {
           ok(ref.read(categoryTreeProvider.future)),
           ok(ref.read(taskListProvider.notifier).refresh()),
         ]);
+        // Diğer cihazlardan gelen görevler için hatırlatmaları güncelle.
+        ref.read(reminderProvider.notifier).requestSync();
         return results.every((r) => r);
       } finally {
         _inFlight = null;

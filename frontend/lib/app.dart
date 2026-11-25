@@ -8,6 +8,7 @@ import 'core/theme/theme_mode_controller.dart';
 import 'features/tasks/presentation/widgets/corner_focus_pill.dart';
 import 'features/tasks/presentation/widgets/desktop_shell_host.dart';
 import 'features/tasks/presentation/widgets/offline_banner.dart';
+import 'features/tasks/presentation/widgets/reminder_host.dart';
 import 'features/tasks/presentation/widgets/sync_widgets.dart';
 
 class YouRManGApp extends ConsumerWidget {
@@ -28,9 +29,11 @@ class YouRManGApp extends ConsumerWidget {
       // Windows Mini Köşe Modu: açıkken pencereyi köşe hapı doldurur (diğer platformlarda etkisiz).
       // Windows tepsi eylemleri; öne gelince kategorileri + görevleri yenile (5 sn bekleme ile).
       builder: (context, child) => DesktopShellHost(
-        child: SyncOnResume(
-          // Çevrimdışı şeridi tam pencere arayüzünün parçası: köşe kapsülünde görünmez.
-          child: CornerModeHost(child: OfflineBanner(child: child ?? const SizedBox.shrink())),
+        child: ReminderHost(
+          child: SyncOnResume(
+            // Çevrimdışı şeridi tam pencere arayüzünün parçası: köşe kapsülünde görünmez.
+            child: CornerModeHost(child: OfflineBanner(child: child ?? const SizedBox.shrink())),
+          ),
         ),
       ),
     );

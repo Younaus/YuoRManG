@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/desktop/corner_window_service.dart';
 import '../../../../core/layout/breakpoints.dart';
+import '../../../../core/notifications/reminder_service.dart';
 import '../../../../core/theme/theme_mode_controller.dart';
 import '../../../../core/widgets/brand.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../tasks/presentation/providers/corner_mode_providers.dart';
 import '../../../tasks/presentation/providers/offline_sync_providers.dart';
+import '../../../tasks/presentation/providers/reminder_providers.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -83,6 +85,10 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (ref.watch(reminderServiceProvider).isSupported) ...[
+                    const SizedBox(height: 16),
+                    const _Section(title: 'Hatırlatmalar', child: _RemindersTile()),
+                  ],
                   if (ref.watch(cornerWindowServiceProvider).isSupported) ...[
                     const SizedBox(height: 16),
                     _Section(
@@ -91,9 +97,7 @@ class SettingsPage extends ConsumerWidget {
                         key: const Key('settings.cornerOnMinimize'),
                         secondary: const Icon(Icons.picture_in_picture_alt_outlined),
                         title: const Text('Küçültünce köşe moduna geç'),
-                        subtitle: const Text(
-                          'Aktif görev varken pencereyi küçültünce otomatik olarak köşe moduna geç',
-                        ),
+                        subtitle: const Text('Aktif görev varken pencereyi küçültünce otomatik olarak köşe moduna geç'),
                         value: ref.watch(cornerModeOnMinimizeProvider),
                         onChanged: ref.read(cornerModeOnMinimizeProvider.notifier).set,
                       ),
@@ -126,9 +130,7 @@ Future<void> _signOut(BuildContext context, WidgetRef ref) async {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Gönderilmemiş değişiklikler var'),
-        content: Text(
-          '$pending değişiklik henüz sunucuya gönderilmedi. Çıkış yaparsanız bu cihazdan silinecek.',
-        ),
+        content: Text('$pending değişiklik henüz sunucuya gönderilmedi. Çıkış yaparsanız bu cihazdan silinecek.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Vazgeç')),
           FilledButton(
@@ -142,6 +144,42 @@ Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     if (confirmed != true) return;
   }
   await ref.read(authRepositoryProvider).signOut();
+}
+
+/// "Hatırlatmaları Aç/Kapat": açarken (Android 13+) bildirim izni istenir.
+class _RemindersTile extends ConsumerWidget {
+  const _RemindersTile();
+
+  Future<void> _toggle(BuildContext context, WidgetRef ref, bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await ref.read(reminderProvider.notifier).setEnabled(value);
+    ref.invalidate(reminderPermissionProvider);
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bildirim izni verilmedi. Hatırlatmalar için sistem ayarlarından izin verin.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(reminderProvider);
+    final permitted = ref.watch(reminderPermissionProvider).value ?? true;
+    final needsPermission = state.enabled && !permitted;
+    return SwitchListTile(
+      key: const Key('settings.reminders'),
+      secondary: Icon(needsPermission ? Icons.notifications_off_outlined : Icons.notifications_active_outlined),
+      title: const Text('Hatırlatmaları Aç/Kapat'),
+      subtitle: Text(
+        needsPermission
+            ? 'Bildirim izni kapalı — hatırlatma gösterilemiyor. Açmak için anahtara dokunun.'
+            : 'Bitiş zamanı gelen görevler için cihaz bildirimi (saat yoksa o gün 09:00)'
+                  '${state.enabled && state.scheduled > 0 ? ' · ${state.scheduled} hatırlatma kurulu' : ''}',
+      ),
+      value: state.enabled && permitted,
+      onChanged: (v) => _toggle(context, ref, v),
+    );
+  }
 }
 
 class _Section extends StatelessWidget {
