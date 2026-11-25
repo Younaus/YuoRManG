@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/desktop/corner_window_service.dart';
+import 'core/desktop/tray_service.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/network/retry_policy.dart';
 import 'core/storage/shared_preferences_provider.dart';
@@ -20,6 +21,8 @@ Future<void> main() async {
     initializeDateFormatting('tr_TR'),
     createCornerWindowService(), // yalnızca Windows'ta window_manager; diğerlerinde no-op
   ).wait;
+  // window_manager köşe servisinde başlatıldı; tepsi + "kapatınca tepsiye gizle" (yalnızca Windows).
+  final tray = await createDesktopTrayService();
 
   runApp(
     ProviderScope(
@@ -27,6 +30,7 @@ Future<void> main() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         cornerWindowServiceProvider.overrideWithValue(cornerWindow),
+        desktopTrayServiceProvider.overrideWithValue(tray),
       ],
       child: const YouRManGApp(),
     ),

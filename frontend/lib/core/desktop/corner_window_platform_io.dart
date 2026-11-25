@@ -69,6 +69,8 @@ class WindowsCornerWindowService with WindowListener implements CornerWindowServ
     try {
       // Geçiş boyunca pencere görünmez: büyük pencerenin küçülüşü / yanıp sönme görülmez.
       await windowManager.setOpacity(0);
+      // Sistem tepsisine gizlenmişse önce (görünmez hâlde) göster.
+      if (!await windowManager.isVisible()) await windowManager.show();
       if (await windowManager.isMinimized()) await windowManager.restore();
       _wasMaximized = await windowManager.isMaximized();
       if (_wasMaximized) await windowManager.unmaximize();
