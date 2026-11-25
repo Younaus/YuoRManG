@@ -67,13 +67,13 @@ void main() {
     expect(find.byKey(const Key('corner.pill')), findsNothing);
   });
 
-  testWidgets('"Hızlı Görev Ekle" pencereyi açıp görev formunu gösterir', (tester) async {
+  testWidgets('"Hızlı Görev Ekle" pencereyi açıp hızlı görev diyaloğunu gösterir', (tester) async {
     await pump(tester);
     tray.trigger(TrayAction.quickAdd);
     await tester.pumpAndSettle();
     expect(tray.calls, contains('show'));
-    expect(find.byType(Dialog), findsOneWidget);
-    expect(find.byKey(const Key('taskForm.title')), findsOneWidget);
+    expect(find.byKey(const Key('quickCapture.dialog')), findsOneWidget);
+    expect(find.byKey(const Key('quickCapture.title')), findsOneWidget);
   });
 
   group('"Köşe Kapsülünü Aç/Kapat"', () {

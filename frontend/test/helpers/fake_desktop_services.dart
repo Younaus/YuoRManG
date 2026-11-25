@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:yourmang/core/desktop/global_hotkey_service.dart';
 import 'package:yourmang/core/desktop/tray_service.dart';
 
 /// Windows sistem tepsisini taklit eder: eylemleri tetikler, pencere çağrılarını kaydeder.
@@ -42,6 +43,12 @@ class FakeDesktopTrayService implements DesktopTrayService {
   }
 
   @override
+  Future<void> blurWindow() async {
+    calls.add('blur');
+    focused = false;
+  }
+
+  @override
   Future<bool> isWindowVisible() async => visible;
 
   @override
@@ -52,4 +59,21 @@ class FakeDesktopTrayService implements DesktopTrayService {
 
   @override
   Future<void> quit() async => calls.add('quit');
+}
+
+/// Sistem geneli Ctrl+Alt+N kısayolunu taklit eder.
+class FakeGlobalHotkeyService implements GlobalHotkeyService {
+  final _quickCapture = StreamController<void>.broadcast();
+  bool disposed = false;
+
+  void press() => _quickCapture.add(null);
+
+  @override
+  bool get isSupported => true;
+
+  @override
+  Stream<void> get quickCapture => _quickCapture.stream;
+
+  @override
+  Future<void> dispose() async => disposed = true;
 }

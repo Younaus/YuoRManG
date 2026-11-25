@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/desktop/corner_window_service.dart';
+import 'core/desktop/global_hotkey_service.dart';
 import 'core/desktop/tray_service.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/network/retry_policy.dart';
@@ -23,6 +24,8 @@ Future<void> main() async {
   ).wait;
   // window_manager köşe servisinde başlatıldı; tepsi + "kapatınca tepsiye gizle" (yalnızca Windows).
   final tray = await createDesktopTrayService();
+  // Sistem geneli Ctrl+Alt+N (yalnızca Windows); kayıt tepsideki "Çıkış" ile temizlenir.
+  final hotkey = await createGlobalHotkeyService();
 
   runApp(
     ProviderScope(
@@ -31,6 +34,7 @@ Future<void> main() async {
         sharedPreferencesProvider.overrideWithValue(prefs),
         cornerWindowServiceProvider.overrideWithValue(cornerWindow),
         desktopTrayServiceProvider.overrideWithValue(tray),
+        globalHotkeyServiceProvider.overrideWithValue(hotkey),
       ],
       child: const YouRManGApp(),
     ),

@@ -111,6 +111,9 @@ class WindowsTrayService with TrayListener, WindowListener implements DesktopTra
   Future<void> minimizeWindow() => windowManager.minimize();
 
   @override
+  Future<void> blurWindow() => windowManager.blur();
+
+  @override
   Future<bool> isWindowVisible() => windowManager.isVisible();
 
   @override

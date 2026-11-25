@@ -33,6 +33,9 @@ abstract interface class DesktopTrayService {
 
   Future<void> minimizeWindow();
 
+  /// Odağı bir sonraki görünür pencereye verir (pencere arka plana geçer).
+  Future<void> blurWindow();
+
   Future<bool> isWindowVisible();
 
   Future<bool> isWindowMinimized();
@@ -61,6 +64,9 @@ class NoopDesktopTrayService implements DesktopTrayService {
 
   @override
   Future<void> minimizeWindow() async {}
+
+  @override
+  Future<void> blurWindow() async {}
 
   @override
   Future<bool> isWindowVisible() async => true;
